@@ -1,5 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT([collectd],[m4_esyscmd(./version-gen.sh)])
+AC_CONFIG_MACRO_DIR([./aclocal])
 AC_CONFIG_SRCDIR(src/)
 AC_CONFIG_HEADERS(src/config.h)
 AC_CONFIG_AUX_DIR([libltdl/config])
@@ -44,6 +45,7 @@ AC_SYS_LARGEFILE
 #
 AC_PROG_CC
 AC_PROG_CPP
+AC_PROG_CXX
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
@@ -54,6 +56,12 @@ AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
 AC_PROG_LEX
 AC_PROG_YACC
+
+# Require boost 1.36 with system and filesytem libraries
+AX_BOOST_BASE([1.36])
+#AX_BOOST_SYSTEM
+#AX_BOOST_FILESYSTEM
+
 
 # Warn when pkg.m4 is missing
 m4_pattern_forbid([^_?PKG_[A-Z_]+$],[*** pkg.m4 missing, please install pkg-config])
@@ -1784,6 +1792,45 @@ then
 fi
 AM_CONDITIONAL(BUILD_WITH_LIBHIREDIS, test "x$with_libhiredis" = "xyes")
 # }}}
+
+# --with-libthrift {{{
+AC_ARG_WITH(libthrift, [AS_HELP_STRING([--with-libthrift@<:@=PREFIX@:>@],
+      [Path to libthrift.])],
+[
+ if test "x$withval" = "xyes"
+ then
+	 with_libthrift="yes"
+ else if test "x$withval" = "xno"
+ then
+	 with_libthrift="no"
+ else
+	 with_libthrift="yes"
+	 LIBTHRIFT_CPPFLAGS="$LIBTHRIFT_CPPFLAGS -I$withval/include"
+	 LIBTHRIFT_LIBS="$LIBTHRIFT_LIBS -L$withval/lib"
+ fi; fi
+],
+[with_libthrift="yes"])
+
+
+if test "x$with_libthrift" = "xyes"
+then
+	if test "x$LIBTHRIFT_CPPFLAGS" != "x"
+	then
+		AC_MSG_NOTICE([libthrift CPPFLAGS: $LIBTHRIFT_CPPFLAGS])
+	fi
+	PKG_CHECK_MODULES([LIBTHRIFT], [thrift >= 0.9.0], with_libthrift=yes, with_libthrift=no)
+fi
+
+if test "x$with_libthrift" = "xyes"
+then
+	BUILD_WITH_LIBTHRIFT_CPPFLAGS="$LIBTHRIFT_CPPFLAGS"
+	BUILD_WITH_LIBTHRIFT_LDFLAGS="$LIBTHRIFT_LIBS"
+	AC_SUBST(BUILD_WITH_LIBTHRIFT_CPPFLAGS)
+	AC_SUBST(BUILD_WITH_LIBTHRIFT_LDFLAGS)
+fi
+AM_CONDITIONAL(BUILD_WITH_LIBTHRIFT, test "x$with_libthrift" = "xyes")
+# }}}
+
 
 # --with-libcurl {{{
 with_curl_config="curl-config"
@@ -5787,6 +5834,7 @@ AC_PLUGIN([write_log], [yes],                  [Log output plugin])
 AC_PLUGIN([write_mongodb], [$with_libmongoc],  [MongoDB output plugin])
 AC_PLUGIN([write_redis], [$with_libhiredis],    [Redis output plugin])
 AC_PLUGIN([write_riemann], [$have_protoc_c],   [Riemann output plugin])
+AC_PLUGIN([write_scribe], [$with_libthrift],   [Scribe output plugin])
 AC_PLUGIN([write_sensu], [yes],                [Sensu output plugin])
 AC_PLUGIN([write_tsdb],  [yes],                [TSDB output plugin])
 AC_PLUGIN([xmms],        [$with_libxmms],      [XMMS statistics])
@@ -6035,6 +6083,7 @@ Configuration:
     libsensors  . . . . . $with_libsensors
     libsigrok   . . . . . $with_libsigrok
     libstatgrab . . . . . $with_libstatgrab
+    libthrift . . . . . . $with_libthrift
     libtokyotyrant  . . . $with_libtokyotyrant
     libudev . . . . . . . $with_libudev
     libupsclient  . . . . $with_libupsclient
@@ -6186,6 +6235,7 @@ Configuration:
     write_mongodb . . . . $enable_write_mongodb
     write_redis . . . . . $enable_write_redis
     write_riemann . . . . $enable_write_riemann
+    write_scribe  . . . . $enable_write_scribe
     write_sensu . . . . . $enable_write_sensu
     write_tsdb  . . . . . $enable_write_tsdb
     xmms  . . . . . . . . $enable_xmms

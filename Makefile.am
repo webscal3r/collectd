@@ -1,4 +1,4 @@
-ACLOCAL_AMFLAGS = -I libltdl/m4
+#ACLOCAL_AMFLAGS = -I libltdl/m4
 
 SUBDIRS =
 
