@@ -1255,8 +1255,8 @@ write_scribe_la_SOURCES = write_scribe.c \
 			scribe/src/gen-cpp/bucketupdater_types.cpp scribe/src/gen-cpp/BucketStoreMapping.cpp
 write_scribe_la_CPPFLAGS = $(AM_CPPFLAGS) $(BUILD_WITH_LIBTHRIFT_CPPFLAGS) $(BOOST_CPPFLAGS) -I./scribe -I./scribe/src -I./scribe/src/gen-cpp
 write_scribe_la_CXXFLAGS = -std=c++11 $(AM_CPPFLAGS) $(BUILD_WITH_LIBTHRIFT_CPPFLAGS) $(BOOST_CPPFLAGS) -I./scribe -I./scribe/src -I./scribe/src/gen-cpp
-write_scribe_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBTHRIFT_LDFLAGS)  $(BOOST_LDFLAGS) -lboost_system-mt -lboost_filesystem-mt -lthrift -lthriftnb -levent -lpthread
-write_scribe_la_LIBADD = $(BUILD_WITH_LIBTHRIFT_LDFLAGS)  $(BOOST_LDFLAGS) $(BOOST_LDFLAGS)  -lboost_system-mt -lboost_filesystem-mt -lthrift -lthriftnb -levent -lpthread
+write_scribe_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBTHRIFT_LDFLAGS)  $(BOOST_LDFLAGS) -lboost_system -lboost_filesystem -lthrift -lthriftnb -levent -lpthread
+write_scribe_la_LIBADD = $(BUILD_WITH_LIBTHRIFT_LDFLAGS)  $(BOOST_LDFLAGS) $(BOOST_LDFLAGS)  -lboost_system -lboost_filesystem -lthrift -lthriftnb -levent -lpthread
 endif
 
 if BUILD_PLUGIN_WRITE_MONGODB
