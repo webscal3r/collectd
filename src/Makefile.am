@@ -1244,13 +1244,12 @@ endif
 
 if BUILD_PLUGIN_WRITE_SCRIBE
 pkglib_LTLIBRARIES += write_scribe.la
-write_scribe_la_SOURCES = write_scribe.c \
-                        utils_format_graphite.c utils_format_graphite.h \
+write_scribe_la_SOURCES = write_scribe.c utils_format_json.c \
 			scribe/src/store.cpp scribe/src/store_queue.cpp scribe/src/conf.cpp \
 			scribe/src/file.cpp scribe/src/conn_pool.cpp scribe/src/scribe_collectd.cpp \
-                        scribe/src/network_dynamic_config.cpp scribe/src/dynamic_bucket_updater.cpp \
-                        scribe/src/gen-cpp/FacebookService.cpp scribe/src/gen-cpp/fb303_constants.cpp \
-                        scribe/src/gen-cpp/fb303_types.cpp scribe/src/FacebookBase.cpp scribe/src/ServiceTracker.cpp \
+      scribe/src/network_dynamic_config.cpp scribe/src/dynamic_bucket_updater.cpp \
+      scribe/src/gen-cpp/FacebookService.cpp scribe/src/gen-cpp/fb303_constants.cpp \
+      scribe/src/gen-cpp/fb303_types.cpp scribe/src/FacebookBase.cpp scribe/src/ServiceTracker.cpp \
 			scribe/src/gen-cpp/scribe.cpp scribe/src/gen-cpp/scribe_types.cpp scribe/src/env_default.cpp \
 			scribe/src/gen-cpp/bucketupdater_types.cpp scribe/src/gen-cpp/BucketStoreMapping.cpp
 write_scribe_la_CPPFLAGS = $(AM_CPPFLAGS) $(BUILD_WITH_LIBTHRIFT_CPPFLAGS) $(BOOST_CPPFLAGS) -I./scribe -I./scribe/src -I./scribe/src/gen-cpp
