@@ -68,7 +68,7 @@ static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
     format_json_value_list(buffer, &bfill, &bfree, ds, vl, 1);
     format_json_finalize(buffer, &bfill, &bfree);
 
-    scribe_log(scribe, buffer, "foo");
+    scribe_log(scribe, buffer, "metrics");
 
     return (0);
 } /* int wl_write_messages */
@@ -345,12 +345,43 @@ static int scribe_config(oconfig_item_t *ci)
     return (0);
 }
 
+static void scribe_plugin_log (int severity, const char *msg,
+                user_data_t __attribute__((unused)) *user_data)
+{
+        /** Convert line to json and output to scribe */
+        char tmp[8192+1024];
+        ssnprintf (tmp, sizeof (tmp), "{\"severity\":%u, \"timestamp\":%.3f, \"host\":\"%s\", \"message\":\"%s\"}", \
+                   severity, CDTIME_T_TO_DOUBLE (cdtime()), hostname_g, replace_json_reserved(msg));
+
+        scribe_log(scribe, tmp, "clogs");
+} /* void logfile_log (int, const char *) */
+
+
+static int scribe_notification (const notification_t *n,
+                user_data_t __attribute__((unused)) *user_data)
+{
+        char  buf[1024] = "";
+        int   buf_len = sizeof (buf);
+
+        ssnprintf (buf, buf_len, "{\"severity\":%u, \"host\":\"%s\", \"timestamp\":%.3f, \"plugin\":\"%s\", \"plugin_instance\":\"%s\", \"type\":\"%s\", \"type_instance\":\"%s\", \"message\":\"%s\"}", \
+                   n->severity, replace_json_reserved(n->host), CDTIME_T_TO_DOUBLE ((n->time != 0) ? n->time : cdtime ()), replace_json_reserved(n->plugin), replace_json_reserved(n->plugin_instance), replace_json_reserved(n->type), \
+                   replace_json_reserved(n->type_instance), replace_json_reserved(n->message));
+
+
+        scribe_log(scribe, buf, "alerts");
+        return (0);
+} /* int logfile_notification */
+
+
+
 void module_register (void)
 {
     plugin_register_init("write_scribe", scribe_init);
     plugin_register_complex_config("write_scribe", scribe_config);
     plugin_register_shutdown("write_scribe", scribe_shutdown);
     plugin_register_write ("write_scribe", scribe_write, NULL);
+    plugin_register_log("write_scribe", scribe_plugin_log, NULL);
+    plugin_register_notification("write_scribe", scribe_notification, NULL);
 }
 
 /* vim: set sw=4 ts=4 sts=4 tw=78 et : */
