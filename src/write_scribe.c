@@ -348,6 +348,9 @@ static int scribe_config(oconfig_item_t *ci)
 static void scribe_plugin_log (int severity, const char *msg,
                 user_data_t __attribute__((unused)) *user_data)
 {
+        if (scribe == NULL)
+            return;
+
         /** Convert line to json and output to scribe */
         char tmp[8192+1024];
         ssnprintf (tmp, sizeof (tmp), "{\"severity\":%u, \"timestamp\":%.3f, \"host\":\"%s\", \"message\":\"%s\"}", \
