@@ -68,7 +68,10 @@ static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
     format_json_value_list(buffer, &bfill, &bfree, ds, vl, 1);
     format_json_finalize(buffer, &bfill, &bfree);
 
-    scribe_log(scribe, buffer, "metrics");
+    char cat[128];
+    ssnprintf(cat, sizeof(cat), "metrics-%d", rand() % 8);
+    
+    scribe_log(scribe, buffer, cat);
 
     return (0);
 } /* int wl_write_messages */
@@ -82,6 +85,7 @@ static int scribe_write (const data_set_t *ds, const value_list_t *vl,
 
 static int scribe_init(void)
 {
+    srand(time(NULL) ^ getpid());
     scribe = new_scribe();
     return (0);
 }
@@ -249,7 +253,9 @@ static int scribe_tail_read (user_data_t *ud) {
         ssnprintf (tmp, sizeof (tmp), "{\"file\": \"%s\", \"timestamp\": %.3f, \"host\":\"%s\", \"message\": \"%s\"}", \
                   id->instance, CDTIME_T_TO_DOUBLE (cdtime()), hostname_g, replace_json_reserved(buffer));
 
-        scribe_log(scribe, tmp, "logs");
+	char cat[128];
+	ssnprintf(cat, sizeof(cat), "logs-%d", rand() % 8);
+        scribe_log(scribe, tmp, cat);
     }
 
     return (0);
@@ -356,7 +362,10 @@ static void scribe_plugin_log (int severity, const char *msg,
         ssnprintf (tmp, sizeof (tmp), "{\"severity\":%u, \"timestamp\":%.3f, \"host\":\"%s\", \"message\":\"%s\"}", \
                    severity, CDTIME_T_TO_DOUBLE (cdtime()), hostname_g, replace_json_reserved(msg));
 
-        scribe_log(scribe, tmp, "clogs");
+	char cat[128];
+	ssnprintf(cat, sizeof(cat), "clogs-%d", rand() % 8);
+	
+        scribe_log(scribe, tmp, cat);
 } /* void logfile_log (int, const char *) */
 
 
@@ -371,7 +380,9 @@ static int scribe_notification (const notification_t *n,
                    replace_json_reserved(n->type_instance), replace_json_reserved(n->message));
 
 
-        scribe_log(scribe, buf, "alerts");
+	char cat[128];
+	ssnprintf(cat, sizeof(cat), "alerts-%d", rand() % 8);
+        scribe_log(scribe, buf, cat);
         return (0);
 } /* int logfile_notification */
 
