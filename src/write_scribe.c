@@ -68,8 +68,7 @@ static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
     format_json_value_list(buffer, &bfill, &bfree, ds, vl, 1);
     format_json_finalize(buffer, &bfill, &bfree);
 
-    char cat[128];
-    ssnprintf(cat, sizeof(cat), "metrics-%d", rand() % 8);
+    char *cat = ssnprintf_alloc("metrics-%d", rand() % 8);
     
     scribe_log(scribe, buffer, cat);
 
@@ -249,12 +248,10 @@ static int scribe_tail_read (user_data_t *ud) {
             return (0);
 
         /** Convert line to json and output to scribe */
-        char tmp[8192+1024];
-        ssnprintf (tmp, sizeof (tmp), "{\"file\": \"%s\", \"timestamp\": %.3f, \"host\":\"%s\", \"message\": \"%s\"}", \
+        char *tmp = ssnprintf_alloc("{\"file\": \"%s\", \"timestamp\": %.3f, \"host\":\"%s\", \"message\": \"%s\"}", \
                   id->instance, CDTIME_T_TO_DOUBLE (cdtime()), hostname_g, replace_json_reserved(buffer));
 
-	char cat[128];
-	ssnprintf(cat, sizeof(cat), "logs-%d", rand() % 8);
+	    char *cat = ssnprintf_alloc("logs-%d", rand() % 8);
         scribe_log(scribe, tmp, cat);
     }
 
@@ -268,7 +265,7 @@ static int scribe_config_add_file_tail(oconfig_item_t *ci)
   int i;
 
   /* Registration variables */
-  char cb_name[DATA_MAX_NAME_LEN];
+  char *cb_name;
   user_data_t cb_data;
 
   id = malloc(sizeof(*id));
@@ -322,7 +319,7 @@ static int scribe_config_add_file_tail(oconfig_item_t *ci)
       return (-1);
   }
 
-  ssnprintf (cb_name, sizeof (cb_name), "write_scribe/%s", id->path);
+  cb_name = ssnprintf_alloc("write_scribe/%s", id->path);
   memset(&cb_data, 0, sizeof(cb_data));
   cb_data.data = id;
   cb_data.free_func = scribe_instance_definition_destroy;
@@ -358,12 +355,10 @@ static void scribe_plugin_log (int severity, const char *msg,
             return;
 
         /** Convert line to json and output to scribe */
-        char tmp[8192+1024];
-        ssnprintf (tmp, sizeof (tmp), "{\"severity\":%u, \"timestamp\":%.3f, \"host\":\"%s\", \"message\":\"%s\"}", \
+        char *tmp = ssnprintf_alloc ("{\"severity\":%u, \"timestamp\":%.3f, \"host\":\"%s\", \"message\":\"%s\"}", \
                    severity, CDTIME_T_TO_DOUBLE (cdtime()), hostname_g, replace_json_reserved(msg));
 
-	char cat[128];
-	ssnprintf(cat, sizeof(cat), "clogs-%d", rand() % 8);
+	    char *cat = ssnprintf_alloc("clogs-%d", rand() % 8);
 	
         scribe_log(scribe, tmp, cat);
 } /* void logfile_log (int, const char *) */
@@ -372,16 +367,11 @@ static void scribe_plugin_log (int severity, const char *msg,
 static int scribe_notification (const notification_t *n,
                 user_data_t __attribute__((unused)) *user_data)
 {
-        char  buf[1024] = "";
-        int   buf_len = sizeof (buf);
-
-        ssnprintf (buf, buf_len, "{\"severity\":%u, \"host\":\"%s\", \"timestamp\":%.3f, \"plugin\":\"%s\", \"plugin_instance\":\"%s\", \"type\":\"%s\", \"type_instance\":\"%s\", \"message\":\"%s\"}", \
+        char *buf = ssnprintf_alloc("{\"severity\":%u, \"host\":\"%s\", \"timestamp\":%.3f, \"plugin\":\"%s\", \"plugin_instance\":\"%s\", \"type\":\"%s\", \"type_instance\":\"%s\", \"message\":\"%s\"}", \
                    n->severity, replace_json_reserved(n->host), CDTIME_T_TO_DOUBLE ((n->time != 0) ? n->time : cdtime ()), replace_json_reserved(n->plugin), replace_json_reserved(n->plugin_instance), replace_json_reserved(n->type), \
                    replace_json_reserved(n->type_instance), replace_json_reserved(n->message));
 
-
-	char cat[128];
-	ssnprintf(cat, sizeof(cat), "alerts-%d", rand() % 8);
+	    char * cat = ssnprintf_alloc("alerts-%d", rand() % 8);
         scribe_log(scribe, buf, cat);
         return (0);
 } /* int logfile_notification */

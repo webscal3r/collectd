@@ -46,7 +46,7 @@ AC_PROG_YACC
 AC_PATH_PROG([VALGRIND], [valgrind])
 
 # Require boost 1.36 with system and filesytem libraries
-AX_BOOST_BASE([1.36])
+AX_BOOST_BASE
 #AX_BOOST_SYSTEM
 #AX_BOOST_FILESYSTEM
 
@@ -6688,7 +6688,7 @@ AC_PLUGIN([write_mongodb],       [$with_libmongoc],         [MongoDB output plug
 AC_PLUGIN([write_prometheus],    [$plugin_write_prometheus], [Prometheus write plugin])
 AC_PLUGIN([write_redis],         [$with_libhiredis],        [Redis output plugin])
 AC_PLUGIN([write_riemann],       [$with_libriemann_client], [Riemann output plugin])
-AC_PLUGIN([write_scribe], [$with_libthrift],   [Scribe output plugin])
+AC_PLUGIN([write_scribe],        [$with_libthrift],         [Scribe output plugin])
 AC_PLUGIN([write_sensu],         [yes],                     [Sensu output plugin])
 AC_PLUGIN([write_tsdb],          [yes],                     [TSDB output plugin])
 AC_PLUGIN([xencpu],              [$plugin_xencpu],          [Xen Host CPU usage])
@@ -7108,6 +7108,7 @@ AC_MSG_RESULT([    write_prometheus. . . $enable_write_prometheus])
 AC_MSG_RESULT([    write_redis . . . . . $enable_write_redis])
 AC_MSG_RESULT([    write_riemann . . . . $enable_write_riemann])
 AC_MSG_RESULT([    write_sensu . . . . . $enable_write_sensu])
+AC_MSG_RESULT([    write_scribe  . . . . $enable_write_scribe])
 AC_MSG_RESULT([    write_tsdb  . . . . . $enable_write_tsdb])
 AC_MSG_RESULT([    xencpu  . . . . . . . $enable_xencpu])
 AC_MSG_RESULT([    xmms  . . . . . . . . $enable_xmms])
