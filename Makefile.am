@@ -1857,7 +1857,7 @@ endif
 
 if BUILD_PLUGIN_WRITE_SCRIBE
 pkglib_LTLIBRARIES += write_scribe.la
-write_scribe_la_SOURCES = src/write_scribe.c src/utils_tail.c src/utils_tail_match.c src/utils_format_json.c \
+write_scribe_la_SOURCES = src/write_scribe.c src/utils_tail.c src/utils_tail_match.c src/utils_match.c src/utils_format_json.c \
 			src/scribe/src/store.cpp src/scribe/src/store_queue.cpp src/scribe/src/conf.cpp \
 			src/scribe/src/file.cpp src/scribe/src/conn_pool.cpp src/scribe/src/scribe_collectd.cpp \
       src/scribe/src/network_dynamic_config.cpp src/scribe/src/dynamic_bucket_updater.cpp \
