@@ -1,4 +1,4 @@
 [submodule "src/scribe"]
 	path = src/scribe
-	url = git@github.com:tjake/scribe.git
+	url = git@github.com:riptano/scribe.git
 	branch = collectd
