@@ -1867,8 +1867,8 @@ write_scribe_la_SOURCES = src/write_scribe.c src/utils_tail.c src/utils_format_j
 			src/scribe/src/gen-cpp/bucketupdater_types.cpp src/scribe/src/gen-cpp/BucketStoreMapping.cpp
 write_scribe_la_CPPFLAGS = $(AM_CPPFLAGS) $(BUILD_WITH_LIBTHRIFT_CPPFLAGS) $(BOOST_CPPFLAGS) -I./src/scribe -I./src/scribe/src -I./src/scribe/src/gen-cpp
 write_scribe_la_CXXFLAGS = -std=c++11 $(AM_CPPFLAGS) $(BUILD_WITH_LIBTHRIFT_CPPFLAGS) $(BOOST_CPPFLAGS) -I./src/scribe -I./src/scribe/src -I./src/scribe/src/gen-cpp
-write_scribe_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBTHRIFT_LDFLAGS)  $(BOOST_LDFLAGS) -lboost_system -lboost_filesystem -lthrift -lthriftnb -levent -lpthread
-write_scribe_la_LIBADD = $(BUILD_WITH_LIBTHRIFT_LDFLAGS)  $(BOOST_LDFLAGS) $(BOOST_LDFLAGS)  -lboost_system -lboost_filesystem -lthrift -lthriftnb -levent -lpthread
+write_scribe_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBTHRIFT_LDFLAGS)  $(BOOST_LDFLAGS) -lboost_system -lboost_filesystem -lthrift -lthriftnb -levent -lpthread -lyajl
+write_scribe_la_LIBADD = $(BUILD_WITH_LIBTHRIFT_LDFLAGS)  $(BOOST_LDFLAGS) $(BOOST_LDFLAGS)  -lboost_system -lboost_filesystem -lthrift -lthriftnb -levent -lpthread -lyajl
 endif
 
 if BUILD_PLUGIN_WRITE_TSDB
