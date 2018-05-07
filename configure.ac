@@ -2170,7 +2170,7 @@ AC_ARG_WITH(libthrift, [AS_HELP_STRING([--with-libthrift@<:@=PREFIX@:>@],
 	 with_libthrift="no"
  else
 	 with_libthrift="yes"
-	 LIBTHRIFT_CPPFLAGS="$LIBTHRIFT_CPPFLAGS -I$withval/include"
+	 LIBTHRIFT_CFLAGS="$LIBTHRIFT_CFLAGS -I$withval/include"
 	 LIBTHRIFT_LIBS="$LIBTHRIFT_LIBS -L$withval/lib"
  fi; fi
 ],
@@ -2179,21 +2179,59 @@ AC_ARG_WITH(libthrift, [AS_HELP_STRING([--with-libthrift@<:@=PREFIX@:>@],
 
 if test "x$with_libthrift" = "xyes"
 then
-	if test "x$LIBTHRIFT_CPPFLAGS" != "x"
+	if test "x$LIBTHRIFT_CFLAGS" != "x"
 	then
-		AC_MSG_NOTICE([libthrift CPPFLAGS: $LIBTHRIFT_CPPFLAGS])
+		AC_MSG_NOTICE([libthrift CFLAGS: $LIBTHRIFT_CFLAGS])
 	fi
 	PKG_CHECK_MODULES([LIBTHRIFT], [thrift >= 0.9.0], with_libthrift=yes, with_libthrift=no)
 fi
 
 if test "x$with_libthrift" = "xyes"
 then
-	BUILD_WITH_LIBTHRIFT_CPPFLAGS="$LIBTHRIFT_CPPFLAGS"
+	BUILD_WITH_LIBTHRIFT_CPPFLAGS="$LIBTHRIFT_CFLAGS"
 	BUILD_WITH_LIBTHRIFT_LDFLAGS="$LIBTHRIFT_LIBS"
 	AC_SUBST(BUILD_WITH_LIBTHRIFT_CPPFLAGS)
 	AC_SUBST(BUILD_WITH_LIBTHRIFT_LDFLAGS)
 fi
 AM_CONDITIONAL(BUILD_WITH_LIBTHRIFT, test "x$with_libthrift" = "xyes")
+# }}}
+
+# --with-openssl {{{
+AC_ARG_WITH(openssl, [AS_HELP_STRING([--with-openssl@<:@=PREFIX@:>@],
+      [Path to openssl.])],
+[
+ if test "x$withval" = "xyes"
+ then
+         with_openssl="yes"
+ else if test "x$withval" = "xno"
+ then
+         with_openssl="no"
+ else
+         with_openssl="yes"
+         OPENSSL_CFLAGS="$OPENSSL_CFLAGS -I$withval/include"
+         OPENSSL_LIBS="$OPENSSL_LIBS -L$withval/lib"
+ fi; fi
+],
+[with_openssl="yes"])
+
+
+if test "x$with_openssl" = "xyes"
+then
+        if test "x$OPENSSL_CFLAGS" != "x"
+        then
+                AC_MSG_NOTICE([openssl CFLAGS: $OPENSSL_CFLAGS])
+        fi
+        PKG_CHECK_MODULES([OPENSSL], [openssl >= 1.0.0], with_openssl=yes, with_openssl=no)
+fi
+
+if test "x$with_openssl" = "xyes"
+then
+        BUILD_WITH_OPENSSL_CPPFLAGS="$OPENSSL_CFLAGS"
+        BUILD_WITH_OPENSSL_LDFLAGS="$OPENSSL_LIBS"
+        AC_SUBST(BUILD_WITH_OPENSSL_CPPFLAGS)
+        AC_SUBST(BUILD_WITH_OPENSSL_LDFLAGS)
+fi
+AM_CONDITIONAL(BUILD_WITH_OPENSSL, test "x$with_openssl" = "xyes")
 # }}}
 
 

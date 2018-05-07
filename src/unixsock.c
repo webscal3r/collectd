@@ -35,6 +35,8 @@
 #include "utils_cmd_listval.h"
 #include "utils_cmd_putnotif.h"
 #include "utils_cmd_putval.h"
+#include "utils_cmd_putinsight.h"
+#include "unixsock.h"
 
 #include <sys/stat.h>
 #include <sys/un.h>
@@ -50,10 +52,6 @@
 /*
  * Private variables
  */
-/* valid configuration file keys */
-static const char *config_keys[] = {"SocketFile", "SocketGroup", "SocketPerms",
-                                    "DeleteSocket"};
-static int config_keys_num = STATIC_ARRAY_SIZE(config_keys);
 
 static int loop = 0;
 
@@ -222,15 +220,25 @@ static void *us_handle_client(void *arg) {
     return (void *)0;
   }
 
+  int limit = 1 << 20; //1MB Limit
+  char *buffer = malloc(limit);
+  char *buffer_copy = malloc(limit);
+
+  if (!buffer || !buffer_copy) {
+     ERROR("unixsock plugin: buffer allocation failed");
+     fclose(fhin);
+     fclose(fhout);
+     pthread_exit((void *)1);
+     return (void *)0;
+  }
+
   while (42) {
-    char buffer[1024];
-    char buffer_copy[1024];
     char *fields[128];
     int fields_num;
     int len;
 
     errno = 0;
-    if (fgets(buffer, sizeof(buffer), fhin) == NULL) {
+    if (fgets(buffer, limit, fhin) == NULL) {
       if ((errno == EINTR) || (errno == EAGAIN))
         continue;
 
@@ -250,7 +258,7 @@ static void *us_handle_client(void *arg) {
     if (len == 0)
       continue;
 
-    sstrncpy(buffer_copy, buffer, sizeof(buffer_copy));
+    sstrncpy(buffer_copy, buffer, limit);
 
     fields_num =
         strsplit(buffer_copy, fields, sizeof(fields) / sizeof(fields[0]));
@@ -274,6 +282,10 @@ static void *us_handle_client(void *arg) {
       handle_putnotif(fhout, buffer);
     } else if (strcasecmp(fields[0], "flush") == 0) {
       cmd_handle_flush(fhout, buffer);
+    } else if (strcasecmp(fields[0], "putinsight") == 0) {
+      cmd_handle_putinsight(fhout, buffer + 10); //skip over the putinsight part
+    } else if (strcasecmp(fields[0], "reloadinsights") == 0) {
+      cmd_handle_reloadinsights(fhout);
     } else {
       if (fprintf(fhout, "-1 Unknown command: %s\n", fields[0]) < 0) {
         char errbuf[1024];
@@ -287,7 +299,8 @@ static void *us_handle_client(void *arg) {
   DEBUG("unixsock plugin: us_handle_client: Exiting..");
   fclose(fhin);
   fclose(fhout);
-
+  free(buffer);
+  free(buffer_copy);
   pthread_exit((void *)0);
   return (void *)0;
 } /* void *us_handle_client */
@@ -360,7 +373,34 @@ static void *us_server_thread(void __attribute__((unused)) * arg) {
   return (void *)0;
 } /* void *us_server_thread */
 
-static int us_config(const char *key, const char *val) {
+int us_config_complex(oconfig_item_t *ci)
+{
+   int i;
+   for (i = 0; i < ci->children_num; ++i) {
+        oconfig_item_t *child = ci->children + i;
+        int status = 0;
+        char *tmp;
+
+        if (strcasecmp(child->key, "SocketFile") == 0 ||
+            strcasecmp(child->key, "SocketGroup") == 0 ||
+            strcasecmp(child->key, "SocketPerms") == 0 ||
+            strcasecmp(child->key, "DeleteSocket") == 0) {
+
+            status = cf_util_get_string (child, &tmp);
+            if (status != 0)
+              return status;
+
+            status = us_config(child->key, tmp);
+            if (status != 0) {
+              return status;
+            }
+        }
+   }
+
+   return (0);
+}
+
+int us_config(const char *key, const char *val) {
   if (strcasecmp(key, "SocketFile") == 0) {
     char *new_sock_file = strdup(val);
     if (new_sock_file == NULL)
@@ -389,7 +429,7 @@ static int us_config(const char *key, const char *val) {
   return 0;
 } /* int us_config */
 
-static int us_init(void) {
+int us_init(void) {
   static int have_init = 0;
 
   int status;
@@ -413,7 +453,7 @@ static int us_init(void) {
   return 0;
 } /* int us_init */
 
-static int us_shutdown(void) {
+int us_shutdown_listener(void) {
   void *ret;
 
   loop = 0;
@@ -424,14 +464,5 @@ static int us_shutdown(void) {
     listen_thread = (pthread_t)0;
   }
 
-  plugin_unregister_init("unixsock");
-  plugin_unregister_shutdown("unixsock");
-
   return 0;
-} /* int us_shutdown */
-
-void module_register(void) {
-  plugin_register_config("unixsock", us_config, config_keys, config_keys_num);
-  plugin_register_init("unixsock", us_init);
-  plugin_register_shutdown("unixsock", us_shutdown);
-} /* void module_register (void) */
+}

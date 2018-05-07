@@ -1,0 +1,22 @@
+schedules:
+  adhoc:
+    schedule: adhoc
+    branches:
+      include: [insights]
+architecture:
+  - x64
+os:
+  - ubuntu/xenial64
+build:
+  - script: |
+      export DEBIAN_FRONTEND=noninteractive
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+      sudo add-apt-repository \
+         "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+      sudo apt-get update
+      sudo apt-get install -y docker-ce
+      cd docker-build
+      sudo BUILD_NUMBER=$BUILD_NUMBER make
+      cd ..
+      VER=`cat docker-build/VERSION`
+      curl -u $ARTIFACTORY_CREDS -T "{$(echo insights-collectd*.gz | tr ' ' ',')}" "https://datastax.jfrog.io/datastax/datastax-releases-local/com/datastax/dse/insights-collectd/${VER}-${BUILD_NUMBER}/"

@@ -98,7 +98,6 @@ pkginclude_HEADERS = \
 
 lib_LTLIBRARIES = libcollectdclient.la
 
-
 sbin_PROGRAMS = \
 	collectd \
 	collectdmon
@@ -109,11 +108,11 @@ bin_PROGRAMS = \
 	collectd-tg \
 	collectdctl
 
-
 noinst_LTLIBRARIES = \
 	libavltree.la \
 	libcmds.la \
 	libcommon.la \
+	libscribe.la \
 	libformat_graphite.la \
 	libformat_json.la \
 	libheap.la \
@@ -123,7 +122,6 @@ noinst_LTLIBRARIES = \
 	libmetadata.la \
 	libmount.la \
 	liboconfig.la
-
 
 check_LTLIBRARIES = \
 	libplugin_mock.la
@@ -419,6 +417,8 @@ test_utils_latency_LDADD = \
 	libplugin_mock.la \
 	-lm
 
+libcmds_la_CPPFLAGS = $(AM_CPPFLAGS) -Isrc/scribe/src
+
 libcmds_la_SOURCES = \
 	src/utils_cmds.c \
 	src/utils_cmds.h \
@@ -427,6 +427,7 @@ libcmds_la_SOURCES = \
 	src/utils_cmd_getthreshold.c \
 	src/utils_cmd_getthreshold.h \
 	src/utils_cmd_getval.c \
+	src/utils_cmd_putinsight.c \
 	src/utils_cmd_getval.h \
 	src/utils_cmd_listval.c \
 	src/utils_cmd_listval.h \
@@ -1689,13 +1690,6 @@ turbostat_la_SOURCES = \
 turbostat_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 
-if BUILD_PLUGIN_UNIXSOCK
-pkglib_LTLIBRARIES += unixsock.la
-unixsock_la_SOURCES = src/unixsock.c
-unixsock_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-unixsock_la_LIBADD = libcmds.la
-endif
-
 if BUILD_PLUGIN_UPTIME
 pkglib_LTLIBRARIES += uptime.la
 uptime_la_SOURCES = src/uptime.c
@@ -1856,19 +1850,23 @@ write_sensu_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 
 if BUILD_PLUGIN_WRITE_SCRIBE
+libscribe_la_SOURCES = src/scribe/src/store.cpp src/scribe/src/store_queue.cpp src/scribe/src/conf.cpp \
+                       src/scribe/src/file.cpp src/scribe/src/conn_pool.cpp src/scribe/src/scribe_collectd.cpp \
+                       src/scribe/src/network_dynamic_config.cpp src/scribe/src/dynamic_bucket_updater.cpp \
+                       src/scribe/src/gen-cpp/FacebookService.cpp src/scribe/src/gen-cpp/fb303_constants.cpp \
+                       src/scribe/src/gen-cpp/fb303_types.cpp src/scribe/src/FacebookBase.cpp src/scribe/src/ServiceTracker.cpp \
+                       src/scribe/src/gen-cpp/scribe.cpp src/scribe/src/gen-cpp/scribe_types.cpp src/scribe/src/env_default.cpp \
+                       src/scribe/src/gen-cpp/bucketupdater_types.cpp src/scribe/src/gen-cpp/BucketStoreMapping.cpp \
+                       src/scribe/src/TInsightsClient.cpp
+libscribe_la_CPPFLAGS = $(AM_CPPFLAGS) $(BUILD_WITH_LIBTHRIFT_CPPFLAGS) $(BUILD_WITH_OPENSSL_CPPFLAGS) $(BOOST_CPPFLAGS) -I./src/scribe -I./src/scribe/src -I./src/scribe/src/gen-cpp
+libscribe_la_CXXFLAGS = -std=c++11 $(AM_CPPFLAGS) $(BUILD_WITH_LIBTHRIFT_CPPFLAGS) $(BOOST_CPPFLAGS) $(BUILD_WITH_OPENSSL_CPPFLAGS) -I./src/scribe -I./src/scribe/src -I./src/scribe/src/gen-cpp
+libscribe_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBTHRIFT_LDFLAGS)  $(BOOST_LDFLAGS) $(BUILD_WITH_OPENSSL_LDFLAGS) -lboost_system -lboost_filesystem -lthrift -levent -lpthread -lz $(BUILD_WITH_LIBYAJL_LIBS)
+
 pkglib_LTLIBRARIES += write_scribe.la
-write_scribe_la_SOURCES = src/write_scribe.c src/utils_tail.c src/utils_format_json.c \
-			src/scribe/src/store.cpp src/scribe/src/store_queue.cpp src/scribe/src/conf.cpp \
-			src/scribe/src/file.cpp src/scribe/src/conn_pool.cpp src/scribe/src/scribe_collectd.cpp \
-      src/scribe/src/network_dynamic_config.cpp src/scribe/src/dynamic_bucket_updater.cpp \
-      src/scribe/src/gen-cpp/FacebookService.cpp src/scribe/src/gen-cpp/fb303_constants.cpp \
-      src/scribe/src/gen-cpp/fb303_types.cpp src/scribe/src/FacebookBase.cpp src/scribe/src/ServiceTracker.cpp \
-			src/scribe/src/gen-cpp/scribe.cpp src/scribe/src/gen-cpp/scribe_types.cpp src/scribe/src/env_default.cpp \
-			src/scribe/src/gen-cpp/bucketupdater_types.cpp src/scribe/src/gen-cpp/BucketStoreMapping.cpp
-write_scribe_la_CPPFLAGS = $(AM_CPPFLAGS) $(BUILD_WITH_LIBTHRIFT_CPPFLAGS) $(BOOST_CPPFLAGS) -I./src/scribe -I./src/scribe/src -I./src/scribe/src/gen-cpp
-write_scribe_la_CXXFLAGS = -std=c++11 $(AM_CPPFLAGS) $(BUILD_WITH_LIBTHRIFT_CPPFLAGS) $(BOOST_CPPFLAGS) -I./src/scribe -I./src/scribe/src -I./src/scribe/src/gen-cpp
-write_scribe_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBTHRIFT_LDFLAGS)  $(BOOST_LDFLAGS) -lboost_system -lboost_filesystem -lthrift -lthriftnb -levent -lpthread -lyajl
-write_scribe_la_LIBADD = $(BUILD_WITH_LIBTHRIFT_LDFLAGS)  $(BOOST_LDFLAGS) $(BOOST_LDFLAGS)  -lboost_system -lboost_filesystem -lthrift -lthriftnb -levent -lpthread -lyajl
+write_scribe_la_SOURCES = src/write_scribe.c src/utils_tail.c src/utils_format_json.c src/utils_format_dse_insights.c src/unixsock.c
+write_scribe_la_CPPFLAGS = $(AM_CPPFLAGS) -I./src/scribe/src
+write_scribe_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBTHRIFT_LDFLAGS)  $(BOOST_LDFLAGS) $(BUILD_WITH_OPENSSL_LDFLAGS) -lboost_system -lboost_filesystem -lthrift -levent -lpthread -lz $(BUILD_WITH_LIBYAJL_LIBS)
+write_scribe_la_LIBADD = libscribe.la libcmds.la
 endif
 
 if BUILD_PLUGIN_WRITE_TSDB
