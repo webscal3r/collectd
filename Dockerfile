@@ -45,7 +45,7 @@ RUN cd /protobuf && ./autogen.sh && ./configure --prefix=/usr --disable-debug &&
 RUN git clone -b v1.3.0 https://github.com/protobuf-c/protobuf-c.git
 RUN cd /protobuf-c && ./autogen.sh && ./configure --prefix=/usr --disable-debug && make && make install
 
-RUN apt-get install -y \
+RUN apt-get update && apt-get install -y \
         build-essential \
         git \
         curl \
@@ -177,7 +177,7 @@ FROM scratch as final-image
 
 COPY --from=base /etc/ssl/certs/ca-certificates.crt /collectd/etc/ssl/certs/ca-certificates.crt
 COPY --from=base /opt/collectd/ /collectd
-COPY --from=base /lib64/ /collectd/lib64
-COPY --from=base /lib/ /collectd/lib
+#COPY --from=base /lib64/ /collectd/lib64
+#COPY --from=base /lib/ /collectd/lib
 COPY docker-build/collectd_wrapper /collectd/usr/sbin
 
