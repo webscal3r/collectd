@@ -73,4 +73,14 @@ do
   fi
 done
 
+#remove symlinks and replace with actual lib
+for link in $(find $target_path -type l)
+do
+  nonlink=$(readlink -fn $link)
+  if [ -f $nonlink ]; then
+    echo "replacing link $link with $nonlink"
+    mv $nonlink $link
+  fi
+done
+
 echo "Everything is there!"
