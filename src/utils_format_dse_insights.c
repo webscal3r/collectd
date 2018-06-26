@@ -74,6 +74,71 @@ static int insights_escape_string(char *buffer, size_t buffer_size, /* {{{ */
   return 0;
 } /* }}} int json_escape_string */
 
+
+static int meta_to_tags(char *buffer, size_t buffer_size, /* {{{ */
+                        meta_data_t *meta, char **keys,
+                        size_t keys_num)
+{
+  size_t offset = 0;
+  int status;
+
+  buffer[0] = 0;
+
+#define BUFFER_ADD(...)                                                        \
+  do {                                                                         \
+    status = snprintf(buffer + offset, buffer_size - offset, __VA_ARGS__);     \
+    if (status < 1)                                                            \
+      return -1;                                                               \
+    else if (((size_t)status) >= (buffer_size - offset))                       \
+      return -ENOMEM;                                                          \
+    else                                                                       \
+      offset += ((size_t)status);                                              \
+  } while (0)
+
+  for (size_t i = 0; i < keys_num; ++i) {
+    int type;
+    char *key = keys[i];
+
+    type = meta_data_type(meta, key);
+    if (type == MD_TYPE_STRING) {
+      char *value = NULL;
+      if (meta_data_get_string(meta, key, &value) == 0) {
+        char temp[512] = "";
+
+        status = insights_escape_string(temp, sizeof(temp), value);
+        sfree(value);
+        if (status != 0)
+          return status;
+
+        BUFFER_ADD(",\"%s\":%s", key, temp);
+      }
+    } else if (type == MD_TYPE_SIGNED_INT) {
+      int64_t value = 0;
+      if (meta_data_get_signed_int(meta, key, &value) == 0)
+        BUFFER_ADD(",\"%s\":%" PRIi64, key, value);
+    } else if (type == MD_TYPE_UNSIGNED_INT) {
+      uint64_t value = 0;
+      if (meta_data_get_unsigned_int(meta, key, &value) == 0)
+        BUFFER_ADD(",\"%s\":%" PRIu64, key, value);
+    } else if (type == MD_TYPE_DOUBLE) {
+      double value = 0.0;
+      if (meta_data_get_double(meta, key, &value) == 0)
+        BUFFER_ADD(",\"%s\":%f", key, value);
+    } else if (type == MD_TYPE_BOOLEAN) {
+      _Bool value = 0;
+      if (meta_data_get_boolean(meta, key, &value) == 0)
+        BUFFER_ADD(",\"%s\":%s", key, value ? "true" : "false");
+    }
+  } /* for (keys) */
+
+  if (offset == 0)
+    return ENOENT;
+
+#undef BUFFER_ADD
+
+  return 0;
+}
+
 static int values_to_insights(char *buffer, size_t buffer_size, /* {{{ */
                               const data_set_t *ds, const value_list_t *vl,
                               int store_rates, size_t ds_idx) {
@@ -156,6 +221,8 @@ static int value_list_to_insights(char *buffer, size_t buffer_size, /* {{{ */
                                   char const *metrics_prefix, int off, int lim) {
   char temp[512];
   size_t offset = 0;
+  int keys_num;
+  char **keys;
   int status;
 
   memset(buffer, 0, buffer_size);
@@ -218,22 +285,45 @@ static int value_list_to_insights(char *buffer, size_t buffer_size, /* {{{ */
 
     BUFFER_ADD("\"collectdType\": %i", ds->ds[i].type);
     BUFFER_ADD(",\"host\": \"%s\"", vl->host);
+
+    //Random K/V pairs
     for (size_t j = 0; j < http_attrs_num; j += 2) {
       BUFFER_ADD(", \"%s\":", http_attrs[j]);
       BUFFER_ADD(" \"%s\"", http_attrs[j + 1]);
     }
 
+    BUFFER_ADD(",\"")
+    //Add specific metadata
+    if (vl->meta != NULL) {
+        char meta_buffer[buffer_size];
+        memset(meta_buffer, 0, sizeof(meta_buffer));
+
+        status = meta_data_toc(vl->meta, &keys);
+        if (status <= 0)
+            return status;
+        keys_num = (size_t)status;
+
+        status = meta_to_tags(meta_buffer, buffer_size, vl->meta, keys, keys_num);
+
+        if (status != 0)
+            return status;
+
+        BUFFER_ADD("%s", meta_buffer);
+        for (size_t i = 0; i < keys_num; ++i)
+            sfree(keys[i]);
+    }
+
     if (strlen(vl->plugin_instance))
-      BUFFER_ADD_KEYVAL("plugin_instance", vl->plugin_instance);
-    BUFFER_ADD_KEYVAL("type", vl->type);
+        BUFFER_ADD_KEYVAL("plugin_instance", vl->plugin_instance);
     if (strlen(vl->type_instance))
-      BUFFER_ADD_KEYVAL("type_instance", vl->type_instance);
+        BUFFER_ADD_KEYVAL("type_instance", vl->type_instance);
     if (ds->ds_num != 1)
-      BUFFER_ADD_KEYVAL("ds", ds->ds[i].name);
+        BUFFER_ADD_KEYVAL("ds", ds->ds[i].name);
+
+    BUFFER_ADD_KEYVAL("type", vl->type);
     BUFFER_ADD("}}");
 
     memset(temp, 0, sizeof(temp));
-
     status = values_to_insights(temp, sizeof(temp), ds, vl, store_rates, i);
     if (status != 0)
       return status;
