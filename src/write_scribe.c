@@ -12,10 +12,15 @@
 #include "utils_tail.h"
 #include "scribe_capi.h"
 #include "unixsock.h"
+#include "utils_avltree.h"
+#include "utils_format_graphite.h"
 
 #define SCRIBE_BUF_SIZE 8192
 
 static char *scribe_config_file = NULL;
+
+static c_avl_tree_t *write_cache;
+static pthread_mutex_t metrics_lock = PTHREAD_MUTEX_INITIALIZER;
 
 struct instance_definition_s {
     char                 *instance;
@@ -27,6 +32,13 @@ struct instance_definition_s {
 };
 
 typedef struct instance_definition_s instance_definition_t;
+
+static int compare_callback(void const *v0, void const *v1) {
+  assert(v0 != NULL);
+  assert(v1 != NULL);
+
+  return strcmp(v0, v1);
+}
 
 static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
 {
@@ -44,20 +56,70 @@ static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
         return -1;
     }
 
+    pthread_mutex_lock(&metrics_lock);
+
     //one metric at a time (in collectd they can be combined)
     for (int i = 0; i < ds->ds_num; i++) {
+
+        /* Check last time we wrote to this key */
+        char const *ds_name = ds->ds[i].name;
+        char key[10 * DATA_MAX_NAME_LEN];
+
+        /* Copy the identifier to `key' and escape it. */
+        int r = gr_format_name(key, sizeof(key), vl, ds_name, "", "", '.', 0);
+        if (r != 0) {
+            ERROR("format_graphite: error with gr_format_name");
+            pthread_mutex_unlock(&metrics_lock);
+            return r;
+        }
+
+        cdtime_t *last_write = NULL;
+        char *key_copy = NULL;
+        if (get_scribe_metric_update_interval_secs() > 0)
+        {
+            if (c_avl_remove(write_cache, key, (void *)&key_copy, (void *)&last_write) == 0)
+            {
+                if (((vl->time >> 30) - (*last_write >> 30)) < get_scribe_metric_update_interval_secs())
+                {
+                    r = c_avl_insert(write_cache, key_copy, last_write);
+                    if (r != 0)
+                        WARNING("Error adding key %s to write_cache", key);
+                    continue;
+                }
+            }
+
+            // New key, allocate for cache otherwise reuse exising memory
+            if (last_write == NULL) {
+                last_write = malloc(sizeof(cdtime_t));
+                key_copy = strdup(key);
+            }
+
+            *last_write = vl->time;
+        }
+
+        /* Send on to Scribe */
         memset (buffer, 0, sizeof (buffer));
 
-        int r = format_insights_initialize(buffer, &bfill, &bfree);
+        r = format_insights_initialize(buffer, &bfill, &bfree);
         if (r == 0)
             r = format_insights_value_list(buffer, &bfill, &bfree, ds, vl, 1, NULL, 0, 0, NULL, i, i+1);
         if (r == 0)
-           r = format_insights_finalize(buffer, &bfill, &bfree);
+            r = format_insights_finalize(buffer, &bfill, &bfree);
 
         if (strlen(buffer) > 0 && r == 0)
-          scribe_log(buffer, "metrics");
+        {
+            scribe_log(buffer, "metrics");
+
+            if (last_write != NULL)
+            {
+                r = c_avl_insert(write_cache, key_copy, last_write);
+                if (r != 0)
+                    WARNING("Error adding key %s to write_cache", key);
+            }
+        }
     }
 
+    pthread_mutex_unlock(&metrics_lock);
     return (0);
 } /* int wl_write_messages */
 
@@ -82,6 +144,11 @@ static int scribe_init(void)
     }
 
     new_scribe2(scribe_config_file);
+    write_cache = c_avl_create(compare_callback);
+    if (write_cache == NULL) {
+        ERROR("Error creating write_cache");
+        return -1;
+    }
 
     us_init();
 
@@ -94,6 +161,9 @@ static int scribe_shutdown(void)
 
     if (is_scribe_initialized())
         delete_scribe();
+
+    if (write_cache != NULL)
+        c_avl_destroy(write_cache);
 
     return (0);
 }
@@ -266,7 +336,7 @@ static int scribe_config(oconfig_item_t *ci)
         else if (strcasecmp("File", child->key) == 0)
             scribe_config_add_file_tail(child);
         else
-            WARNING("write_scribe plugin: Ignoring unknown config option `%s'.", child->key);
+            WARNING("write_scribe plugin: Ignoring config option `%s'.", child->key);
 
          if (status != 0) {
             ERROR("Error reading %s", child->key);
@@ -283,30 +353,6 @@ static int scribe_config(oconfig_item_t *ci)
     //config unixsock
     return us_config_complex(ci);
 }
-
-static void scribe_plugin_log (int severity, const char *msg,
-                user_data_t __attribute__((unused)) *user_data)
-{
-      char buffer[SCRIBE_BUF_SIZE + 512];
-      size_t   bfree = sizeof(buffer);
-      size_t   bfill = 0;
-
-      if (!is_scribe_initialized() || strlen(msg) == 0)
-         return;
-
-      memset (buffer, 0, sizeof (buffer));
-
-      int r = format_insights_initialize(buffer, &bfill, &bfree);
-      if (r == 0)
-          r = format_insights_log(buffer, &bfill, &bfree, (char *) msg, "collectd.log");
-      if (r == 0)
-          r = format_insights_finalize(buffer, &bfill, &bfree);
-
-      if (strlen(buffer) > 0 && r == 0)
-          scribe_log(buffer, "collectd");
-
-} /* void logfile_log (int, const char *) */
-
 
 static int scribe_notification (const notification_t *n,
                 user_data_t __attribute__((unused)) *user_data)
@@ -327,7 +373,6 @@ void module_register (void)
     plugin_register_complex_config("write_scribe", scribe_config);
     plugin_register_shutdown("write_scribe", scribe_shutdown);
     plugin_register_write ("write_scribe", scribe_write, NULL);
-    plugin_register_log("write_scribe", scribe_plugin_log, NULL);
     plugin_register_notification("write_scribe", scribe_notification, NULL);
 }
 

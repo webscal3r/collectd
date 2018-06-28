@@ -259,6 +259,7 @@ static int value_list_to_insights(char *buffer, size_t buffer_size, /* {{{ */
     BUFFER_ADD("%s", vl->plugin);
 
     BUFFER_ADD("\", \"timestamp\":%" PRIu64, CDTIME_T_TO_MS(vl->time));
+    BUFFER_ADD(", \"insightMappingId\": \"collectd-v1\"");
     BUFFER_ADD(", \"insightType\":\"");
 
     switch(ds->ds[i].type) {
@@ -292,7 +293,8 @@ static int value_list_to_insights(char *buffer, size_t buffer_size, /* {{{ */
       BUFFER_ADD(" \"%s\"", http_attrs[j + 1]);
     }
 
-    BUFFER_ADD(",\"")
+    BUFFER_ADD(",\"");
+
     //Add specific metadata
     if (vl->meta != NULL) {
         char meta_buffer[buffer_size];
@@ -505,8 +507,6 @@ int format_insights_log(char *buffer, size_t *ret_buffer_fill, size_t *ret_buffe
 
     return format_insights_log_nocheck(buffer, ret_buffer_fill, ret_buffer_free, logmsg, strlen(logmsg), file, strlen(file));
 }
-
-
 
 
 /* vim: set sw=2 sts=2 et fdm=marker : */

@@ -97,7 +97,7 @@ static void gr_copy_escape_part(char *dst, const char *src, size_t dst_len,
   }
 }
 
-static int gr_format_name(char *ret, int ret_len, value_list_t const *vl,
+int gr_format_name(char *ret, int ret_len, value_list_t const *vl,
                           char const *ds_name, char const *prefix,
                           char const *postfix, char const escape_char,
                           unsigned int flags) {

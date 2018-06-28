@@ -37,4 +37,9 @@ int format_graphite(char *buffer, size_t buffer_size, const data_set_t *ds,
                     const char *postfix, const char escape_char,
                     unsigned int flags);
 
+int gr_format_name(char *ret, int ret_len, value_list_t const *vl,
+                   char const *ds_name, char const *prefix,
+                   char const *postfix, char const escape_char,
+                   unsigned int flags);
+
 #endif /* UTILS_FORMAT_GRAPHITE_H */
