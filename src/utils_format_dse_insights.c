@@ -293,8 +293,6 @@ static int value_list_to_insights(char *buffer, size_t buffer_size, /* {{{ */
       BUFFER_ADD(" \"%s\"", http_attrs[j + 1]);
     }
 
-    BUFFER_ADD(",\"");
-
     //Add specific metadata
     if (vl->meta != NULL) {
         char meta_buffer[buffer_size];

@@ -1860,12 +1860,12 @@ libscribe_la_SOURCES = src/scribe/src/store.cpp src/scribe/src/store_queue.cpp s
                        src/scribe/src/TInsightsClient.cpp src/env_scribe_collectd.cpp
 libscribe_la_CPPFLAGS = $(AM_CPPFLAGS) -DCOLLECTD $(BUILD_WITH_LIBTHRIFT_CPPFLAGS) $(BUILD_WITH_OPENSSL_CPPFLAGS) $(BOOST_CPPFLAGS) -I./src -I./src/scribe -I./src/scribe/src -I./src/scribe/src/gen-cpp
 libscribe_la_CXXFLAGS = -std=c++11 -DCOLLECTD $(AM_CPPFLAGS) $(BUILD_WITH_LIBTHRIFT_CPPFLAGS) $(BOOST_CPPFLAGS) $(BUILD_WITH_OPENSSL_CPPFLAGS) -I./src -I./src/scribe -I./src/scribe/src -I./src/scribe/src/gen-cpp
-libscribe_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBTHRIFT_LDFLAGS)  $(BOOST_LDFLAGS) $(BUILD_WITH_OPENSSL_LDFLAGS) -lboost_system -lboost_filesystem -lthrift -levent -lpthread -lz $(BUILD_WITH_LIBYAJL_LIBS)
+libscribe_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBTHRIFT_LDFLAGS)  $(BOOST_LDFLAGS) $(BUILD_WITH_OPENSSL_LDFLAGS) -lboost_system -lboost_filesystem -lboost_iostreams -lthrift -levent -lpthread -lz $(BUILD_WITH_LIBYAJL_LIBS)
 
 pkglib_LTLIBRARIES += write_scribe.la
 write_scribe_la_SOURCES = src/write_scribe.c src/utils_tail.c src/utils_format_graphite.c src/utils_format_dse_insights.c src/unixsock.c
 write_scribe_la_CPPFLAGS = $(AM_CPPFLAGS) -I./src/scribe/src
-write_scribe_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBTHRIFT_LDFLAGS)  $(BOOST_LDFLAGS) $(BUILD_WITH_OPENSSL_LDFLAGS) -lboost_system -lboost_filesystem -lthrift -levent -lpthread -lz $(BUILD_WITH_LIBYAJL_LIBS)
+write_scribe_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBTHRIFT_LDFLAGS)  $(BOOST_LDFLAGS) $(BUILD_WITH_OPENSSL_LDFLAGS) -lboost_system -lboost_filesystem -lboost_iostreams -lthrift -levent -lpthread -lz $(BUILD_WITH_LIBYAJL_LIBS)
 write_scribe_la_LIBADD = libscribe.la libcmds.la
 endif
 
