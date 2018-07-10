@@ -43,6 +43,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef __cplusplus
+typedef int _Bool;
+#endif
 #if HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
