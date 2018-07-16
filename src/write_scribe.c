@@ -62,11 +62,13 @@ static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
     {
        char *value = NULL;
        int status = meta_data_get_string(vl->meta, "insight_filtered", &value);
-       if (status != -ENOENT)
+
+       if (status != -ENOENT && value != NULL)
+          sfree(value);
+
+       if (status == 0)
        {
           //Filter flag found
-          if (value != NULL)
-             sfree(value);
           return 0;
        }
     }
