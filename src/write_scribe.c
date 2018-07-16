@@ -56,6 +56,21 @@ static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
         return -1;
     }
 
+
+    // If contains the filter tag then skip
+    if (vl->meta != NULL)
+    {
+       char *value = NULL;
+       int status = meta_data_get_string(vl->meta, "insight_filtered", &value);
+       if (status != -ENOENT)
+       {
+          //Filter flag found
+          if (value != NULL)
+             sfree(value);
+          return 0;
+       }
+    }
+
     pthread_mutex_lock(&metrics_lock);
 
     //one metric at a time (in collectd they can be combined)

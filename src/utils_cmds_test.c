@@ -134,6 +134,10 @@ static struct {
         "PUTVAL myhost/magic/MAGIC interval=2 1234:42 interval=5 2345:23", NULL,
         CMD_OK, CMD_PUTVAL,
     },
+    {
+        "PUTVAL myhost/magic/MAGIC interval=2 foo=bar 1234:42", NULL,
+                CMD_OK, CMD_PUTVAL,
+    },
 
     /* Invalid PUTVAL commands. */
     {

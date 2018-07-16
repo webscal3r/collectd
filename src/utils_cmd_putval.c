@@ -49,8 +49,24 @@ static int set_option(value_list_t *vl, const char *key, const char *value) {
 
     if ((errno == 0) && (endptr != NULL) && (endptr != value) && (tmp > 0.0))
       vl->interval = DOUBLE_TO_CDTIME_T(tmp);
-  } else
-    return 1;
+  } else {
+     if (vl->meta == NULL) {
+        vl->meta = meta_data_create();
+     }
+
+     if (vl->meta == NULL) {
+        return -ENOMEM;
+     }
+
+     int status = meta_data_add_string(vl->meta, key, value);
+
+     if (status != 0) {
+         ERROR("network plugin: meta_data_add_boolean failed.");
+         meta_data_destroy(vl->meta);
+         vl->meta = NULL;
+         return status;
+     }
+  }
 
   return 0;
 } /* int set_option */
