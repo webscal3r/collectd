@@ -125,7 +125,7 @@ static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
 
         if (strlen(buffer) > 0 && r == 0)
         {
-            scribe_log(buffer, "metrics");
+            scribe_log(buffer, "insights");
 
             if (last_write != NULL)
             {
@@ -260,7 +260,7 @@ static int scribe_tail_read (user_data_t *ud) {
             r = format_insights_finalize(buffer, &bfill, &bfree);
 
         if (strlen(buffer) > 0 && r == 0)
-            scribe_log(buffer, "logs");
+            scribe_log(buffer, "insights");
     }
 
     return (0);
