@@ -17,7 +17,7 @@
 void cmd_handle_putinsight(FILE *fh, char *buffer)
 {
     if (is_scribe_initialized()) {
-        scribe_log(buffer, "insight");
+        scribe_log(buffer, "insights");
         print_to_socket(fh, "1 Insight added\n");
     } else {
         print_to_socket(fh, "-1 No Scribe\n");
