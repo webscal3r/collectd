@@ -256,7 +256,13 @@ static int value_list_to_insights(char *buffer, size_t buffer_size, /* {{{ */
       BUFFER_ADD("%s.", metrics_prefix);
     }
 
-    BUFFER_ADD("%s", vl->plugin);
+    // Avoid use the plugin-instance for the name in the case of DSE.
+    // Till we switch to better naming on DSE side
+    if (strcasecmp(vl->plugin, "dse") == 0 && strlen(vl->plugin_instance)) {
+        BUFFER_ADD("%s", vl->plugin_instance);
+    } else {
+        BUFFER_ADD("%s", vl->plugin);
+    }
 
     BUFFER_ADD("\", \"timestamp\":%" PRIu64, CDTIME_T_TO_MS(vl->time));
     BUFFER_ADD(", \"insightMappingId\": \"collectd-v1\"");
@@ -313,6 +319,7 @@ static int value_list_to_insights(char *buffer, size_t buffer_size, /* {{{ */
             sfree(keys[i]);
     }
 
+
     if (strlen(vl->plugin_instance))
         BUFFER_ADD_KEYVAL("plugin_instance", vl->plugin_instance);
     if (strlen(vl->type_instance))
@@ -320,6 +327,7 @@ static int value_list_to_insights(char *buffer, size_t buffer_size, /* {{{ */
     if (ds->ds_num != 1)
         BUFFER_ADD_KEYVAL("ds", ds->ds[i].name);
 
+    BUFFER_ADD_KEYVAL("plugin", vl->plugin);
     BUFFER_ADD_KEYVAL("type", vl->type);
     BUFFER_ADD("}}");
 
