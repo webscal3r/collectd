@@ -317,6 +317,7 @@ static int value_list_to_insights(char *buffer, size_t buffer_size, /* {{{ */
         BUFFER_ADD("%s", meta_buffer);
         for (size_t i = 0; i < keys_num; ++i)
             sfree(keys[i]);
+        sfree(keys);
     }
 
 

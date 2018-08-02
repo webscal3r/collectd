@@ -180,7 +180,16 @@ static int scribe_shutdown(void)
         delete_scribe();
 
     if (write_cache != NULL)
+    {
+        void *key;
+        void *value;
+        while (c_avl_pick(write_cache, &key, &value) == 0) {
+            sfree(key);
+            sfree(value);
+        }
+
         c_avl_destroy(write_cache);
+    }
 
     return (0);
 }
