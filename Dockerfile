@@ -23,7 +23,7 @@ RUN apt-get update && \
         git
 
 # Install dependencies
-RUN apt-get install -y build-essential libmicrohttpd-dev \
+RUN apt-get install -y build-essential \
     libsnmp-dev bison libbison-dev flex autotools-dev \
     pkg-config libtool libboost-all-dev libboost-test-dev \
     libboost-program-options-dev libevent-dev automake g++ libssl-dev texinfo
