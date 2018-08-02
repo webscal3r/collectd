@@ -147,6 +147,7 @@ RUN cd /collectd && ./clean.sh && ./build.sh && ./configure \
         --disable-xmms \
         --disable-write_sensu \
         --disable-zfs-arc \
+        --disable-tokyotyrant \
         --disable-write_kafka \
         --with-perl-bindings="INSTALLDIRS=vendor INSTALL_BASE=" \
         --without-libstatgrab \
