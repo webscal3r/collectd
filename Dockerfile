@@ -26,7 +26,7 @@ RUN apt-get update && \
 RUN apt-get install -y build-essential libmicrohttpd-dev \
     libsnmp-dev bison libbison-dev flex autotools-dev \
     pkg-config libtool libboost-all-dev libboost-test-dev \
-    libboost-program-options-dev libevent-dev automake g++ libssl-dev
+    libboost-program-options-dev libevent-dev automake g++ libssl-dev texinfo
 
 
 #pull thrift (dependency)
@@ -44,6 +44,9 @@ RUN cd /protobuf && ./autogen.sh && ./configure --prefix=/usr --disable-debug &&
 #build protobuf-c
 RUN git clone -b v1.3.0 https://github.com/protobuf-c/protobuf-c.git
 RUN cd /protobuf-c && ./autogen.sh && ./configure --prefix=/usr --disable-debug && make && make install
+
+RUN git clone -b v0.9.59 https://github.com/Karlson2k/libmicrohttpd
+RUN cd libmicrohttpd && ./bootstrap && ./configure --prefix=/usr --disable-debug && make && make install
 
 RUN apt-get update && apt-get install -y \
         build-essential \
@@ -67,7 +70,6 @@ RUN apt-get update && apt-get install -y \
         libglib2.0-dev \
         liblvm2-dev \
         libmemcached-dev \
-        libmicrohttpd-dev \
         libmodbus-dev \
         libmnl-dev \
         libmysqlclient-dev \
@@ -93,8 +95,6 @@ RUN apt-get update && apt-get install -y \
         python-dev \
         python-pip \
         libprotobuf-c0-dev \
-        libtokyocabinet-dev \
-        libtokyotyrant-dev \
         libupsclient-dev \
         libi2c-dev \
         libyajl-dev \
@@ -177,7 +177,5 @@ FROM scratch as final-image
 
 COPY --from=base /etc/ssl/certs/ca-certificates.crt /collectd/etc/ssl/certs/ca-certificates.crt
 COPY --from=base /opt/collectd/ /collectd
-#COPY --from=base /lib64/ /collectd/lib64
-#COPY --from=base /lib/ /collectd/lib
 COPY docker-build/collectd_wrapper /collectd/usr/sbin
 
