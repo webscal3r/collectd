@@ -809,7 +809,7 @@ static struct MHD_Daemon *prom_start_daemon() {
     return NULL;
   }
 
-  unsigned int flags = MHD_USE_THREAD_PER_CONNECTION | MHD_USE_DEBUG;
+  unsigned int flags = MHD_USE_THREAD_PER_CONNECTION | MHD_USE_AUTO | MHD_USE_DEBUG;
 #if MHD_VERSION >= 0x00095300
   flags |= MHD_USE_INTERNAL_POLLING_THREAD;
 #endif
