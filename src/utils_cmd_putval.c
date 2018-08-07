@@ -128,7 +128,7 @@ cmd_status_t cmd_parse_putval(size_t argc, char **argv,
        (strlen(plugin_instance) >= sizeof(vl.plugin_instance))) ||
       ((type_instance != NULL) &&
        (strlen(type_instance) >= sizeof(vl.type_instance)))) {
-    cmd_error(CMD_PARSE_ERROR, err, "Identifier too long.");
+    cmd_error(CMD_PARSE_ERROR, err, "Identifier too long. '%s'", identifier_copy);
     sfree(identifier_copy);
     return CMD_PARSE_ERROR;
   }
