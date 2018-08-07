@@ -107,6 +107,7 @@ COPY . /collectd
 RUN cd /collectd && ./clean.sh && ./build.sh && ./configure \
         --prefix /opt/collectd/usr \
         --disable-debug \
+        --with-data-max-name-len=1024 \
         --sysconfdir=/etc \
         --localstatedir=/var \
         --enable-all-plugins \
