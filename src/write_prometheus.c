@@ -146,17 +146,20 @@ static char const *escape_label_value(char *buffer, size_t buffer_size,
  */
 static char *format_labels(char *buffer, size_t buffer_size,
                            Io__Prometheus__Client__Metric const *m) {
-  /* our metrics always have at least one and at most three labels. */
+  /* our metrics always have at least one and at most ten labels. */
   assert(m->n_label >= 1);
-  assert(m->n_label <= 3);
+  assert(m->n_label <= 10);
 
 #define LABEL_KEY_SIZE DATA_MAX_NAME_LEN
 #define LABEL_VALUE_SIZE (2 * DATA_MAX_NAME_LEN - 1)
 #define LABEL_BUFFER_SIZE (LABEL_KEY_SIZE + LABEL_VALUE_SIZE + 4)
 
-  char *labels[3] = {
+  char *labels[10] = {
       (char[LABEL_BUFFER_SIZE]){0}, (char[LABEL_BUFFER_SIZE]){0},
-      (char[LABEL_BUFFER_SIZE]){0},
+      (char[LABEL_BUFFER_SIZE]){0}, (char[LABEL_BUFFER_SIZE]){0},
+      (char[LABEL_BUFFER_SIZE]){0}, (char[LABEL_BUFFER_SIZE]){0},
+      (char[LABEL_BUFFER_SIZE]){0}, (char[LABEL_BUFFER_SIZE]){0},
+      (char[LABEL_BUFFER_SIZE]){0}, (char[LABEL_BUFFER_SIZE]){0},
   };
 
   /* N.B.: the label *names* are hard-coded by this plugin and therefore we
@@ -194,7 +197,7 @@ static void format_text(ProtobufCBuffer *buffer) {
     for (size_t i = 0; i < fam->n_metric; i++) {
       Io__Prometheus__Client__Metric *m = fam->metric[i];
 
-      char labels[1024];
+      char labels[4096];
 
       char timestamp_ms[24] = "";
       if (m->has_timestamp_ms)
@@ -296,7 +299,8 @@ static void label_pair_destroy(Io__Prometheus__Client__LabelPair *msg) {
     return;
 
   sfree(msg->name);
-  sfree(msg->value);
+  if (msg->value != NULL)
+    sfree(msg->value);
 
   sfree(msg);
 }
@@ -343,9 +347,22 @@ static int metric_cmp(void const *a, void const *b) {
   Io__Prometheus__Client__Metric const *m_b =
       *((Io__Prometheus__Client__Metric **)b);
 
-  if (m_a->n_label < m_b->n_label)
+  /* find instance option, that delimits the collectd metadata, the rest is app labels */
+  int alimit = 0;
+  int blimit = 0;
+  for (size_t i = 0; i < m_a->n_label && i < 3; i++, alimit++) {
+    if (strcmp(m_a->label[i]->name, "instance") == 0)
+        break;
+  }
+
+  for (size_t i = 0; i < m_b->n_label && i < 3; i++, blimit++) {
+    if (strcmp(m_b->label[i]->name, "instance") == 0)
+        break;
+  }
+
+  if (alimit < blimit)
     return -1;
-  else if (m_a->n_label > m_b->n_label)
+  else if (alimit > blimit)
     return 1;
 
   /* Prometheus does not care about the order of labels. All labels in this
@@ -372,7 +389,7 @@ static int metric_cmp(void const *a, void const *b) {
    * 1 label:
    * [1] instance="$host"           => "instance" is a static string
    */
-  for (size_t i = 0; i < m_a->n_label; i++) {
+  for (size_t i = 0; i < alimit; i++) {
     int status = strcmp(m_a->label[i]->value, m_b->label[i]->value);
     if (status != 0)
       return status;
@@ -385,10 +402,60 @@ static int metric_cmp(void const *a, void const *b) {
   return 0;
 }
 
+static char *meta_to_tags(char *key, meta_data_t *meta)
+{
+  int type = meta_data_type(meta, key);
+  if (type == MD_TYPE_STRING) {
+      char *value = NULL;
+      if (meta_data_get_string(meta, key, &value) == 0)
+        return value;
+  } else if (type == MD_TYPE_SIGNED_INT) {
+      int64_t value = 0;
+      if (meta_data_get_signed_int(meta, key, &value) == 0)
+        return ssnprintf_alloc("%" PRIi64, value);
+  } else if (type == MD_TYPE_UNSIGNED_INT) {
+      uint64_t value = 0;
+      if (meta_data_get_unsigned_int(meta, key, &value) == 0)
+        return ssnprintf_alloc("%" PRIu64, value);
+  } else if (type == MD_TYPE_DOUBLE) {
+      double value = 0.0;
+      if (meta_data_get_double(meta, key, &value) == 0)
+        return ssnprintf_alloc("%f", value);
+  } else if (type == MD_TYPE_BOOLEAN) {
+      _Bool value = 0;
+      if (meta_data_get_boolean(meta, key, &value) == 0)
+        return ssnprintf_alloc("%s", value ? "true" : "false");
+  }
+
+  return NULL;
+}
+
+
 #define METRIC_INIT                                                            \
   &(Io__Prometheus__Client__Metric) {                                          \
     .label =                                                                   \
         (Io__Prometheus__Client__LabelPair *[]){                               \
+            &(Io__Prometheus__Client__LabelPair){                              \
+                .name = NULL,                                                  \
+            },                                                                 \
+            &(Io__Prometheus__Client__LabelPair){                              \
+                .name = NULL,                                                  \
+            },                                                                 \
+            &(Io__Prometheus__Client__LabelPair){                              \
+                .name = NULL,                                                  \
+            },                                                                 \
+            &(Io__Prometheus__Client__LabelPair){                              \
+                .name = NULL,                                                  \
+            },                                                                 \
+            &(Io__Prometheus__Client__LabelPair){                              \
+                .name = NULL,                                                  \
+            },                                                                 \
+            &(Io__Prometheus__Client__LabelPair){                              \
+                .name = NULL,                                                  \
+            },                                                                 \
+            &(Io__Prometheus__Client__LabelPair){                              \
+                .name = NULL,                                                  \
+            },                                                                 \
             &(Io__Prometheus__Client__LabelPair){                              \
                 .name = NULL,                                                  \
             },                                                                 \
@@ -421,6 +488,20 @@ static int metric_cmp(void const *a, void const *b) {
     (m)->label[(m)->n_label]->name = "instance";                               \
     (m)->label[(m)->n_label]->value = (char *)(vl)->host;                      \
     (m)->n_label++;                                                            \
+                                                                               \
+    if (vl->meta != NULL) {                                                    \
+        int keys_num;                                                          \
+        char **keys;                                                           \
+        keys_num = meta_data_toc(vl->meta, &keys);                             \
+        if (keys_num <= 0)                                                     \
+            break;                                                             \
+                                                                               \
+        for (size_t p = 0; p < keys_num && (m)->n_label < 10; p++, (m)->n_label++) { \
+           (m)->label[(m)->n_label]->name = keys[p];                           \
+           (m)->label[(m)->n_label]->value = meta_to_tags(keys[p], vl->meta);  \
+        }                                                                      \
+        sfree(keys);                                                           \
+    }                                                                          \
   } while (0)
 
 /* metric_clone allocates and initializes a new metric based on orig. */

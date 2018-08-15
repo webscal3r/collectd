@@ -66,7 +66,7 @@ const std::string scribeversion("2.2");
  */
 #define LOG_OPER(format_string,...)                                         \
   {                                                                         \
-    plugin_log(LOG_INFO, "scribe_backend: " #format_string, ##__VA_ARGS__); \
+    plugin_log(LOG_DEBUG, "scribe_backend: " #format_string, ##__VA_ARGS__); \
   }
 
 

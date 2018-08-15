@@ -281,3 +281,12 @@ arc_ratio               value:GAUGE:0:U
 arc_size                current:GAUGE:0:U, target:GAUGE:0:U, minlimit:GAUGE:0:U, maxlimit:GAUGE:0:U
 mysql_qcache            hits:COUNTER:0:U, inserts:COUNTER:0:U, not_cached:COUNTER:0:U, lowmem_prunes:COUNTER:0:U, queries_in_cache:GAUGE:0:U
 mysql_threads           running:GAUGE:0:U, connected:GAUGE:0:U, cached:GAUGE:0:U, created:COUNTER:0:U
+
+
+#
+# Insights specific types
+#
+meter                   count:COUNTER:0:U, rate_mean:GAUGE:0:U, rate_1m:GAUGE:0:U, rate_5m:GAUGE:0:U, rate_15m:GAUGE:0:U
+histogram               count:COUNTER:0:U, max:GAUGE:0:U, min:GAUGE:0:U, mean:GAUGE:0:U, stddev:GAUGE:0:U, p50:GAUGE:0:U, p75:GAUGE:0:U, p90:GAUGE:0:U, p95:GAUGE:0:U, p98:GAUGE:0:U, p99:GAUGE:0:U, p999:GAUGE:0:U
+timer                   count:COUNTER:0:U, rate_mean:GAUGE:0:U, rate_1m:GAUGE:0:U, rate_5m:GAUGE:0:U, rate_15m:GAUGE:0:U, max:GAUGE:0:U, min:GAUGE:0:U, mean:GAUGE:0:U, stddev:GAUGE:0:U, p50:GAUGE:0:U, p75:GAUGE:0:U, p90:GAUGE:0:U, p95:GAUGE:0:U, p98:GAUGE:0:U, p99:GAUGE:0:U, p999:GAUGE:0:U
+micros                  count:COUNTER:0:U, sum:GAUGE:0:U bucket_32:GAUGE:0:U bucket_64:GAUGE:0:U bucket_128:GAUGE:0:U bucket_256:GAUGE:0:U bucket_512:GAUGE:0:U bucket_1024:GAUGE:0:U bucket_2048:GAUGE:0:U bucket_4096:GAUGE:0:U bucket_8192:GAUGE:0:U bucket_16384:GAUGE:0:U bucket_32768:GAUGE:0:U bucket_65536:GAUGE:0:U bucket_131072:GAUGE:0:U bucket_262144:GAUGE:0:U bucket_524288:GAUGE:0:U bucket_1048576:GAUGE:0:U bucket_2097152:GAUGE:0:U bucket_4194304:GAUGE:0:U bucket_8388608:GAUGE:0:U bucket_inf:GAUGE:0:U
