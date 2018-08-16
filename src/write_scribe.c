@@ -172,10 +172,8 @@ static int scribe_init(void)
     return (0);
 }
 
-static int scribe_shutdown(void)
+static int scribe_shutdown()
 {
-    us_shutdown_listener();
-
     if (is_scribe_initialized())
         delete_scribe();
 
@@ -189,8 +187,10 @@ static int scribe_shutdown(void)
         }
 
         c_avl_destroy(write_cache);
+        write_cache = NULL;
     }
 
+    us_shutdown_listener();
     return (0);
 }
 

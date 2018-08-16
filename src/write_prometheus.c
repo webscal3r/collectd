@@ -146,31 +146,30 @@ static char const *escape_label_value(char *buffer, size_t buffer_size,
  */
 static char *format_labels(char *buffer, size_t buffer_size,
                            Io__Prometheus__Client__Metric const *m) {
-  /* our metrics always have at least one and at most ten labels. */
+  /* our metrics always have at least one label */
   assert(m->n_label >= 1);
-  assert(m->n_label <= 10);
 
 #define LABEL_KEY_SIZE DATA_MAX_NAME_LEN
 #define LABEL_VALUE_SIZE (2 * DATA_MAX_NAME_LEN - 1)
 #define LABEL_BUFFER_SIZE (LABEL_KEY_SIZE + LABEL_VALUE_SIZE + 4)
 
-  char *labels[10] = {
-      (char[LABEL_BUFFER_SIZE]){0}, (char[LABEL_BUFFER_SIZE]){0},
-      (char[LABEL_BUFFER_SIZE]){0}, (char[LABEL_BUFFER_SIZE]){0},
-      (char[LABEL_BUFFER_SIZE]){0}, (char[LABEL_BUFFER_SIZE]){0},
-      (char[LABEL_BUFFER_SIZE]){0}, (char[LABEL_BUFFER_SIZE]){0},
-      (char[LABEL_BUFFER_SIZE]){0}, (char[LABEL_BUFFER_SIZE]){0},
-  };
+  char *labels[m->n_label];
 
   /* N.B.: the label *names* are hard-coded by this plugin and therefore we
    * know that they are sane. */
   for (size_t i = 0; i < m->n_label; i++) {
+    labels[i] = malloc(LABEL_BUFFER_SIZE);
+    assert(labels[i] != NULL);
     char value[LABEL_VALUE_SIZE];
     snprintf(labels[i], LABEL_BUFFER_SIZE, "%s=\"%s\"", m->label[i]->name,
              escape_label_value(value, sizeof(value), m->label[i]->value));
   }
 
   strjoin(buffer, buffer_size, labels, m->n_label, ",");
+
+  for (size_t i = 0; i < m->n_label; i++)
+    sfree(labels[i]);
+
   return buffer;
 }
 
@@ -298,7 +297,8 @@ static void label_pair_destroy(Io__Prometheus__Client__LabelPair *msg) {
   if (msg == NULL)
     return;
 
-  sfree(msg->name);
+  if (msg->name != NULL)
+    sfree(msg->name);
   if (msg->value != NULL)
     sfree(msg->value);
 
@@ -319,6 +319,17 @@ label_pair_clone(Io__Prometheus__Client__LabelPair const *orig) {
     label_pair_destroy(copy);
     return NULL;
   }
+
+  return copy;
+}
+
+/* label_pair_clone allocates and initializes a new label pair. */
+static Io__Prometheus__Client__LabelPair *
+label_pair_clone_noval(Io__Prometheus__Client__LabelPair const *orig) {
+  Io__Prometheus__Client__LabelPair *copy = calloc(1, sizeof(*copy));
+  if (copy == NULL)
+    return NULL;
+  io__prometheus__client__label_pair__init(copy);
 
   return copy;
 }
@@ -444,27 +455,6 @@ static char *meta_to_tags(char *key, meta_data_t *meta)
             &(Io__Prometheus__Client__LabelPair){                              \
                 .name = NULL,                                                  \
             },                                                                 \
-            &(Io__Prometheus__Client__LabelPair){                              \
-                .name = NULL,                                                  \
-            },                                                                 \
-            &(Io__Prometheus__Client__LabelPair){                              \
-                .name = NULL,                                                  \
-            },                                                                 \
-            &(Io__Prometheus__Client__LabelPair){                              \
-                .name = NULL,                                                  \
-            },                                                                 \
-            &(Io__Prometheus__Client__LabelPair){                              \
-                .name = NULL,                                                  \
-            },                                                                 \
-            &(Io__Prometheus__Client__LabelPair){                              \
-                .name = NULL,                                                  \
-            },                                                                 \
-            &(Io__Prometheus__Client__LabelPair){                              \
-                .name = NULL,                                                  \
-            },                                                                 \
-            &(Io__Prometheus__Client__LabelPair){                              \
-                .name = NULL,                                                  \
-            },                                                                 \
         },                                                                     \
     .n_label = 0,                                                              \
   }
@@ -488,43 +478,73 @@ static char *meta_to_tags(char *key, meta_data_t *meta)
     (m)->label[(m)->n_label]->name = "instance";                               \
     (m)->label[(m)->n_label]->value = (char *)(vl)->host;                      \
     (m)->n_label++;                                                            \
-                                                                               \
-    if (vl->meta != NULL) {                                                    \
-        int keys_num;                                                          \
-        char **keys;                                                           \
-        keys_num = meta_data_toc(vl->meta, &keys);                             \
-        if (keys_num <= 0)                                                     \
-            break;                                                             \
-                                                                               \
-        for (size_t p = 0; p < keys_num && (m)->n_label < 10; p++, (m)->n_label++) { \
-           (m)->label[(m)->n_label]->name = keys[p];                           \
-           (m)->label[(m)->n_label]->value = meta_to_tags(keys[p], vl->meta);  \
-        }                                                                      \
-        sfree(keys);                                                           \
-    }                                                                          \
   } while (0)
 
-/* metric_clone allocates and initializes a new metric based on orig. */
+
+/* metric_clone allocates and initializes a new metric based on orig.
+ * this method will also copy over any custom tags from the orig value_list_t
+ */
 static Io__Prometheus__Client__Metric *
-metric_clone(Io__Prometheus__Client__Metric const *orig) {
+metric_clone(Io__Prometheus__Client__Metric const *orig, value_list_t const *vl) {
   Io__Prometheus__Client__Metric *copy = calloc(1, sizeof(*copy));
   if (copy == NULL)
     return NULL;
   io__prometheus__client__metric__init(copy);
 
-  copy->n_label = orig->n_label;
+  int num_labels = orig->n_label;
+  int num_keys = 0;
+  char **keys;
+  if (vl->meta != NULL) {
+     num_keys = meta_data_toc(vl->meta, &keys);
+     if (num_keys > 0)
+        num_labels += num_keys;
+  }
+
+  copy->n_label = num_labels;
   copy->label = calloc(copy->n_label, sizeof(*copy->label));
   if (copy->label == NULL) {
     sfree(copy);
+    if (num_keys > 0) {
+      for (size_t i = 0; i < num_keys; i++)
+        sfree(keys[i]);
+      sfree(keys);
+    }
     return NULL;
   }
 
-  for (size_t i = 0; i < copy->n_label; i++) {
+  for (size_t i = 0; i < orig->n_label; i++) {
     copy->label[i] = label_pair_clone(orig->label[i]);
     if (copy->label[i] == NULL) {
       metric_destroy(copy);
+      if (num_keys > 0) {
+        for (size_t i = 0; i < num_keys; i++)
+          sfree(keys[i]);
+        sfree(keys);
+      }
       return NULL;
     }
+  }
+
+  // Add metric meta tags as labels
+  if (num_keys > 0)
+  {
+    for (size_t i = 0, p = orig->n_label; p < num_labels; i++, p++) {
+      copy->label[p] = label_pair_clone_noval(orig->label[0]);
+      if (copy->label[p] == NULL) {
+        metric_destroy(copy);
+        if (num_keys > 0) {
+          for (size_t i = 0; i < num_keys; i++)
+            sfree(keys[i]);
+          sfree(keys);
+        }
+        return NULL;
+      }
+
+      copy->label[p]->name = keys[i];
+      copy->label[p]->value = meta_to_tags(keys[i], vl->meta);
+    }
+
+    sfree(keys);
   }
 
   return copy;
@@ -661,7 +681,7 @@ metric_family_get_metric(Io__Prometheus__Client__MetricFamily *fam,
     return *m;
   }
 
-  Io__Prometheus__Client__Metric *new_metric = metric_clone(key);
+  Io__Prometheus__Client__Metric *new_metric = metric_clone(key, vl);
   if (new_metric == NULL)
     return NULL;
 
