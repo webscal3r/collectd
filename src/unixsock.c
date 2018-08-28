@@ -60,7 +60,7 @@ static int sock_fd = -1;
 static char *sock_file = NULL;
 static char *sock_group = NULL;
 static int sock_perms = S_IRWXU | S_IRWXG;
-static _Bool delete_socket = 0;
+static _Bool delete_socket = 1;
 
 static pthread_t listen_thread = (pthread_t)0;
 
@@ -151,7 +151,7 @@ static int us_open_socket(void) {
       break;
     }
     if (g == NULL) {
-      WARNING("unixsock plugin: No such group: `%s'", grpname);
+      DEBUG("unixsock plugin: No such group: `%s'", grpname);
       break;
     }
 
