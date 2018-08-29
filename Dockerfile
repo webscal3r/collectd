@@ -170,8 +170,8 @@ ADD docker-build/templates/collectd/managed_config /opt/collectd/etc/collectd/
 #RUN bash /tmp/plugins/install-plugins.sh
 
 ADD docker-build/collect-libs.sh docker-build/symbol-gen.sh /opt/
+RUN /opt/symbol-gen.sh /opt/collectd /opt/collectd-symbols
 RUN /opt/collect-libs.sh /opt/collectd /opt/collectd
-RUN /opt/symbol-gen.sh /opt/collectd /opt/collectd-symbols 
 
 # Clean up unnecessary man files
 RUN rm -rf /opt/collectd/usr/share/man 
