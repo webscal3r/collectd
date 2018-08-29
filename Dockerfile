@@ -106,7 +106,6 @@ COPY . /collectd
 
 RUN cd /collectd && ./clean.sh && ./build.sh && ./configure \
         --prefix /opt/collectd/usr \
-        --disable-debug \
         --with-data-max-name-len=1024 \
         --sysconfdir=/etc \
         --localstatedir=/var \
@@ -162,15 +161,17 @@ RUN cd /collectd && ./clean.sh && ./build.sh && ./configure \
 RUN pip install requests
 
 # configure
-RUN mkdir -p /opt/collectd/etc/collectd/filtering_config
-RUN mkdir -p /opt/collectd/etc/collectd/managed_config
+RUN mkdir -p /opt/collectd/etc/collectd
 RUN mkdir -p /opt/collectd/usr/bin
+RUN mkdir -p /opt/collectd-symbols
 
+ADD docker-build/templates/collectd/managed_config /opt/collectd/etc/collectd/
 #COPY install-plugins.sh plugins.yaml /tmp/plugins/
 #RUN bash /tmp/plugins/install-plugins.sh
 
-ADD docker-build/collect-libs.sh /opt/
+ADD docker-build/collect-libs.sh docker-build/symbol-gen.sh /opt/
 RUN /opt/collect-libs.sh /opt/collectd /opt/collectd
+RUN /opt/symbol-gen.sh /opt/collectd /opt/collectd-symbols 
 
 # Clean up unnecessary man files
 RUN rm -rf /opt/collectd/usr/share/man 
@@ -179,5 +180,6 @@ FROM scratch as final-image
 
 COPY --from=base /etc/ssl/certs/ca-certificates.crt /collectd/etc/ssl/certs/ca-certificates.crt
 COPY --from=base /opt/collectd/ /collectd
+COPY --from=base /opt/collectd-symbols/ /collectd-symbols
 COPY docker-build/collectd_wrapper /collectd/usr/sbin
 
