@@ -109,13 +109,13 @@ RUN cd /collectd && ./clean.sh && ./build.sh && ./configure \
         --with-data-max-name-len=1024 \
         --sysconfdir=/etc \
         --localstatedir=/var \
+        --enable-debug       \
         --enable-all-plugins \
         --disable-ascent \
         --disable-rrdcached \
         --disable-lvm \
         --disable-turbostat \
         --disable-write_kafka \
-        --disable-cpusleep \
         --disable-curl_xml \
         --disable-dpdkstat \
         --disable-dpdkevents \
