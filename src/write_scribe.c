@@ -33,6 +33,9 @@ struct instance_definition_s {
 
 typedef struct instance_definition_s instance_definition_t;
 
+static instance_definition_t *tailed_files[1024];
+static int num_tailed_files = 0;
+
 static int compare_callback(void const *v0, void const *v1) {
   assert(v0 != NULL);
   assert(v1 != NULL);
@@ -105,7 +108,7 @@ static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
                 }
             }
 
-            // New key, allocate for cache otherwise reuse exising memory
+            // New key, allocate for cache otherwise reuse existing memory
             if (last_write == NULL) {
                 last_write = malloc(sizeof(cdtime_t));
                 key_copy = strdup(key);
@@ -134,6 +137,11 @@ static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
                     WARNING("Error adding key %s to write_cache", key);
             }
         }
+        else
+        {
+            sfree(key_copy);
+            sfree(last_write);
+        }
     }
 
     pthread_mutex_unlock(&metrics_lock);
@@ -150,6 +158,7 @@ static int scribe_write (const data_set_t *ds, const value_list_t *vl,
 static int scribe_init(void)
 {
     srand(time(NULL) ^ getpid());
+    memset (tailed_files, 0, sizeof (tailed_files));
 
     if (strcasecmp(scribe_config_file, "env") == 0) {
         scribe_config_file = getenv("SCRIBE_CONFIG_FILE");
@@ -172,8 +181,34 @@ static int scribe_init(void)
     return (0);
 }
 
+static void scribe_instance_definition_destroy(void *arg){
+    instance_definition_t *id;
+
+    id = arg;
+    if (id == NULL)
+        return;
+
+    if (id->tail != NULL)
+        cu_tail_destroy (id->tail);
+    id->tail = NULL;
+
+    sfree(id->instance);
+    sfree(id->path);
+    sfree(id);
+}
+
 static int scribe_shutdown()
 {
+    pthread_mutex_lock(&metrics_lock);
+
+    us_shutdown_listener();
+
+    for (int i = 0; i < num_tailed_files; i++)
+    {
+        scribe_instance_definition_destroy((void *)tailed_files[i]);
+        tailed_files[i] = NULL;
+    }
+
     if (is_scribe_initialized())
         delete_scribe();
 
@@ -190,25 +225,11 @@ static int scribe_shutdown()
         write_cache = NULL;
     }
 
-    us_shutdown_listener();
+    pthread_mutex_unlock(&metrics_lock);
+
     return (0);
 }
 
-static void scribe_instance_definition_destroy(void *arg){
-    instance_definition_t *id;
-
-    id = arg;
-    if (id == NULL)
-        return;
-
-    if (id->tail != NULL)
-        cu_tail_destroy (id->tail);
-    id->tail = NULL;
-
-    sfree(id->instance);
-    sfree(id->path);
-    sfree(id);
-}
 
 static int scribe_tail_read (user_data_t *ud) {
     instance_definition_t *id;
@@ -348,6 +369,8 @@ static int scribe_config_add_file_tail(oconfig_item_t *ci)
       return (-1);
   }
 
+  tailed_files[num_tailed_files++] = id;
+
   return (0);
 }
 
@@ -380,26 +403,12 @@ static int scribe_config(oconfig_item_t *ci)
     return us_config_complex(ci);
 }
 
-static int scribe_notification (const notification_t *n,
-                user_data_t __attribute__((unused)) *user_data)
-{
-        /*char *buf = ssnprintf_alloc("{\"severity\":%u, \"host\":\"%s\", \"timestamp\":%.3f, \"plugin\":\"%s\", \"plugin_instance\":\"%s\", \"type\":\"%s\", \"type_instance\":\"%s\", \"message\":\"%s\"}", \
-                   n->severity, replace_json_reserved(n->host), CDTIME_T_TO_DOUBLE ((n->time != 0) ? n->time : cdtime ()), replace_json_reserved(n->plugin), replace_json_reserved(n->plugin_instance), replace_json_reserved(n->type), \
-                   replace_json_reserved(n->type_instance), replace_json_reserved(n->message));
-
-        scribe_log(buf, "notificatons"); */
-        return (0);
-} /* int logfile_notification */
-
-
-
 void module_register (void)
 {
     plugin_register_init("write_scribe", scribe_init);
     plugin_register_complex_config("write_scribe", scribe_config);
     plugin_register_shutdown("write_scribe", scribe_shutdown);
     plugin_register_write ("write_scribe", scribe_write, NULL);
-    plugin_register_notification("write_scribe", scribe_notification, NULL);
 }
 
 /* vim: set sw=4 ts=4 sts=4 tw=78 et : */

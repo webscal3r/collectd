@@ -69,6 +69,11 @@ const std::string scribeversion("2.2");
     plugin_log(LOG_DEBUG, "scribe_backend: " #format_string, ##__VA_ARGS__); \
   }
 
+#define LOG_WARN(format_string,...)                                         \
+  {                                                                         \
+    plugin_log(LOG_WARNING, "scribe_backend: " #format_string, ##__VA_ARGS__); \
+  }
+
 
 namespace scribe {
 
