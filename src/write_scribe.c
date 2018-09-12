@@ -201,8 +201,6 @@ static int scribe_shutdown()
 {
     pthread_mutex_lock(&metrics_lock);
 
-    us_shutdown_listener();
-
     for (int i = 0; i < num_tailed_files; i++)
     {
         scribe_instance_definition_destroy((void *)tailed_files[i]);
