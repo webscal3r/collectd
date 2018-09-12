@@ -299,8 +299,8 @@ static void *us_handle_client(void *arg) {
   DEBUG("unixsock plugin: us_handle_client: Exiting..");
   fclose(fhin);
   fclose(fhout);
-  free(buffer);
-  free(buffer_copy);
+  sfree(buffer);
+  sfree(buffer_copy);
   pthread_exit((void *)0);
   return (void *)0;
 } /* void *us_handle_client */
