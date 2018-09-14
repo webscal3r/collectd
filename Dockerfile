@@ -3,7 +3,7 @@ FROM ubuntu:16.04 as base
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update
+RUN apt-get update -y 
 RUN apt-get upgrade -y
 # Install all apt-get utils and required repos
 RUN apt-get update && \
@@ -26,29 +26,7 @@ RUN apt-get update && \
 RUN apt-get install -y build-essential \
     libsnmp-dev bison libbison-dev flex autotools-dev \
     pkg-config libtool libboost-all-dev libboost-test-dev \
-    libboost-program-options-dev libevent-dev automake g++ libssl-dev texinfo
-
-
-#pull thrift (dependency)
-RUN git clone -b 0.10.0 https://github.com/apache/thrift.git
-
-#build thrift
-RUN cd /thrift && ./bootstrap.sh && ./configure --prefix=/usr --config-cache --disable-debug --with-java=no --with-erlang=no --with-php=no --with-perl=no --with-php_extension=no --with-ruby=no --with-haskell=no --with-go=no --with-libevent && make && make install
-
-RUN cd /thrift/contrib/fb303 && ./bootstrap.sh && ./configure --prefix=/usr --disable-debug --with-thriftpath=/usr --without-java --without-php && make && make install && cd py && python setup.py install && make distclean
-
-#build protobuf
-RUN git clone -b v3.5.1 https://github.com/google/protobuf.git
-RUN cd /protobuf && ./autogen.sh && ./configure --prefix=/usr --disable-debug && make && make install
-
-#build protobuf-c
-RUN git clone -b v1.3.0 https://github.com/protobuf-c/protobuf-c.git
-RUN cd /protobuf-c && ./autogen.sh && ./configure --prefix=/usr --disable-debug && make && make install
-
-RUN git clone -b v0.9.59 https://github.com/Karlson2k/libmicrohttpd
-RUN cd libmicrohttpd && ./bootstrap && ./configure --prefix=/usr --disable-debug && make && make install
-
-RUN apt-get update && apt-get install -y \
+    libboost-program-options-dev libevent-dev automake g++ libssl-dev texinfo \
         build-essential \
         git \
         curl \
@@ -101,6 +79,27 @@ RUN apt-get update && apt-get install -y \
         libatasmart-dev \
         libldap2-dev \
         wget
+
+#pull thrift (dependency)
+RUN git clone -b 0.10.0 https://github.com/apache/thrift.git
+
+#build thrift
+RUN cd /thrift && ./bootstrap.sh && ./configure --prefix=/usr --config-cache --disable-debug --with-java=no --with-erlang=no --with-php=no --with-perl=no --with-php_extension=no --with-ruby=no --with-haskell=no --with-go=no --with-libevent && make && make install
+
+RUN cd /thrift/contrib/fb303 && ./bootstrap.sh && ./configure --prefix=/usr --disable-debug --with-thriftpath=/usr --without-java --without-php && make && make install && cd py && python setup.py install && make distclean
+
+#build protobuf
+RUN git clone -b v3.5.1 https://github.com/google/protobuf.git
+RUN cd /protobuf && ./autogen.sh && ./configure --prefix=/usr --disable-debug && make && make install
+
+#build protobuf-c
+RUN git clone -b v1.3.0 https://github.com/protobuf-c/protobuf-c.git
+RUN cd /protobuf-c && ./autogen.sh && ./configure --prefix=/usr --disable-debug && make && make install
+
+RUN git clone -b v0.9.59 https://github.com/Karlson2k/libmicrohttpd
+RUN cd libmicrohttpd && ./bootstrap && ./configure --prefix=/usr --disable-debug && make && make install
+
+RUN apt-get install -y libc6-dbg
 
 COPY . /collectd
 
@@ -176,6 +175,7 @@ RUN /opt/collect-libs.sh /opt/collectd /opt/collectd
 # Clean up unnecessary man files
 RUN rm -rf /opt/collectd/usr/share/man 
 
+#CMD ["/bin/bash"]
 FROM scratch as final-image
 
 COPY --from=base /etc/ssl/certs/ca-certificates.crt /collectd/etc/ssl/certs/ca-certificates.crt

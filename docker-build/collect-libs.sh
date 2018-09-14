@@ -60,6 +60,19 @@ done
 
 echo "Processed $(wc -w <<< $libs) libraries"
 
+echo "Checking for missing lib dependencies..."
+
+# Look for all of the deps now in the target_path and make sure we have them
+new_deps=$(find_deps $target_path | sed -e "s!^$target_path!!")
+for dep in $new_deps
+do
+  stat ${target_path}${dep} >/dev/null
+  if [[ $? != 0 ]]; then
+    echo "Missing dependency in target dir: $dep" >&2
+    exit 1
+  fi
+done
+
 #remove symlinks and replace with actual lib
 for link in $(find $target_path -type l)
 do
@@ -71,9 +84,7 @@ do
 done
 
 #also copy things needed to run
-cp -a -R --parents /lib $target_path
-cp -a -R --parents /lib64 $target_path
-rm -fr $target_path/lib/systemd
+cp -a -R --parents /lib/x86_64-linux-gnu $target_path
 
 for link in $(find $target_path -type l)
 do
@@ -87,19 +98,5 @@ done
 
 # remove any symlinks left
 find $target_path -type l -exec rm {} \;
-
-echo "Checking for missing lib dependencies..."
-
-# Look for all of the deps now in the target_path and make sure we have them
-#new_deps=$(find_deps $target_path | sed -e "s!^$target_path!!")
-#for dep in $new_deps
-#do
-#  stat ${target_path}${dep} >/dev/null
-#  if [[ $? != 0 ]]; then
-#    echo "Missing dependency in target dir: $dep" >&2
-#    exit 1
-#  fi
-#done
-
 
 echo "Everything is there!"

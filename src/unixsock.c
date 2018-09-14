@@ -128,42 +128,6 @@ static int us_open_socket(void) {
     return -1;
   }
 
-  do {
-    const char *grpname;
-    struct group *g;
-    struct group sg;
-
-    long int grbuf_size = sysconf(_SC_GETGR_R_SIZE_MAX);
-    if (grbuf_size <= 0)
-      grbuf_size = sysconf(_SC_PAGESIZE);
-    if (grbuf_size <= 0)
-      grbuf_size = 4096;
-    char grbuf[grbuf_size];
-
-    grpname = (sock_group != NULL) ? sock_group : COLLECTD_GRP_NAME;
-    g = NULL;
-
-    status = getgrnam_r(grpname, &sg, grbuf, sizeof(grbuf), &g);
-    if (status != 0) {
-      char errbuf[1024];
-      WARNING("unixsock plugin: getgrnam_r (%s) failed: %s", grpname,
-              sstrerror(status, errbuf, sizeof(errbuf)));
-      break;
-    }
-    if (g == NULL) {
-      DEBUG("unixsock plugin: No such group: `%s'", grpname);
-      break;
-    }
-
-    if (chown((sock_file != NULL) ? sock_file : US_DEFAULT_PATH, (uid_t)-1,
-              g->gr_gid) != 0) {
-      char errbuf[1024];
-      WARNING("unixsock plugin: chown (%s, -1, %i) failed: %s",
-              (sock_file != NULL) ? sock_file : US_DEFAULT_PATH, (int)g->gr_gid,
-              sstrerror(errno, errbuf, sizeof(errbuf)));
-    }
-  } while (0);
-
   return 0;
 } /* int us_open_socket */
 
@@ -373,43 +337,16 @@ static void *us_server_thread(void __attribute__((unused)) * arg) {
   return (void *)0;
 } /* void *us_server_thread */
 
-int us_config_complex(oconfig_item_t *ci)
-{
-   int i;
-   for (i = 0; i < ci->children_num; ++i) {
-        oconfig_item_t *child = ci->children + i;
-        int status = 0;
-        char *tmp;
-
-        if (strcasecmp(child->key, "SocketFile") == 0 ||
-            strcasecmp(child->key, "SocketGroup") == 0 ||
-            strcasecmp(child->key, "SocketPerms") == 0 ||
-            strcasecmp(child->key, "DeleteSocket") == 0) {
-
-            status = cf_util_get_string (child, &tmp);
-            if (status != 0)
-              return status;
-
-            status = us_config(child->key, tmp);
-            if (status != 0) {
-              return status;
-            }
-        }
-   }
-
-   return (0);
-}
-
-int us_config(const char *key, const char *val) {
+int us_config(const char *key, char *val) {
   if (strcasecmp(key, "SocketFile") == 0) {
-    char *new_sock_file = strdup(val);
+    char *new_sock_file = val;
     if (new_sock_file == NULL)
       return 1;
 
     sfree(sock_file);
     sock_file = new_sock_file;
   } else if (strcasecmp(key, "SocketGroup") == 0) {
-    char *new_sock_group = strdup(val);
+    char *new_sock_group = val;
     if (new_sock_group == NULL)
       return 1;
 
@@ -452,6 +389,32 @@ int us_init(void) {
 
   return 0;
 } /* int us_init */
+
+int us_config_complex(oconfig_item_t *ci)
+{
+   int i;
+   for (i = 0; i < ci->children_num; ++i) {
+        oconfig_item_t *child = ci->children + i;
+        int status = 0;
+        char *tmp = NULL;
+
+        if (strcasecmp(child->key, "SocketFile") == 0 ||
+            strcasecmp(child->key, "SocketGroup") == 0 ||
+            strcasecmp(child->key, "SocketPerms") == 0 ||
+            strcasecmp(child->key, "DeleteSocket") == 0) {
+
+            status = cf_util_get_string (child, &tmp);
+            if (status != 0)
+              return status;
+
+            status = us_config(child->key, tmp);
+            if (status != 0)
+              return status;
+        }
+   }
+
+   return (0);
+}
 
 int us_shutdown_listener(void) {
   void *ret;
