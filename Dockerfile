@@ -113,7 +113,6 @@ RUN cd /collectd && ./clean.sh && ./build.sh && ./configure \
         --disable-ascent \
         --disable-rrdcached \
         --disable-lvm \
-        --disable-turbostat \
         --disable-write_kafka \
         --disable-curl_xml \
         --disable-dpdkstat \
