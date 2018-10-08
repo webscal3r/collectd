@@ -9,7 +9,7 @@ os:
   - ubuntu/xenial64
 build:
   - script: |
-      which docker
+      `which docker`
       if [ $? != 0 ]; then
         export DEBIAN_FRONTEND=noninteractive
         curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
