@@ -7,6 +7,11 @@ if [ -d .git ]; then
 fi
 
 if test -z "$VERSION"; then
+        VERSION="$INSIGHT_VERSION"
+fi
+
+
+if test -z "$VERSION"; then
 	VERSION="$DEFAULT_VERSION"
 fi
 

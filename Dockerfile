@@ -2,6 +2,8 @@
 FROM ubuntu:16.04 as base
 
 ENV DEBIAN_FRONTEND=noninteractive
+ARG insight_version
+ENV INSIGHT_VERSION=$insight_version
 
 RUN apt-get update -y 
 RUN apt-get upgrade -y
