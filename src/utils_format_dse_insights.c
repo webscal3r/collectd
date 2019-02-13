@@ -253,7 +253,7 @@ static int value_list_to_insights(char *buffer, size_t buffer_size, /* {{{ */
     BUFFER_ADD("{\"name\":\"");
 
     if (metrics_prefix != NULL) {
-      BUFFER_ADD("%s.", metrics_prefix);
+      BUFFER_ADD("%s", metrics_prefix);
     }
 
     // Avoid use the plugin-instance for the name in the case of DSE.

@@ -122,7 +122,7 @@ static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
 
         r = format_insights_initialize(buffer, &bfill, &bfree);
         if (r == 0)
-            r = format_insights_value_list(buffer, &bfill, &bfree, ds, vl, 0, NULL, 0, 0, NULL, i, i+1);
+            r = format_insights_value_list(buffer, &bfill, &bfree, ds, vl, 0, NULL, 0, 0, "collectd_", i, i+1);
         if (r == 0)
             r = format_insights_finalize(buffer, &bfill, &bfree);
 
