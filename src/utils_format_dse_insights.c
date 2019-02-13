@@ -269,12 +269,12 @@ static int value_list_to_insights(char *buffer, size_t buffer_size, /* {{{ */
     BUFFER_ADD(", \"insightType\":\"");
 
     switch(ds->ds[i].type) {
+        case DS_TYPE_ABSOLUTE:
         case DS_TYPE_COUNTER:
             BUFFER_ADD("COUNTER");
             break;
         case DS_TYPE_GAUGE:
         case DS_TYPE_DERIVE:
-        case DS_TYPE_ABSOLUTE:
             BUFFER_ADD("GAUGE");
             break;
         default:
