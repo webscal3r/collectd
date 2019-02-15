@@ -252,7 +252,7 @@ static int value_list_to_insights(char *buffer, size_t buffer_size, /* {{{ */
     BUFFER_ADD(",{\"metadata\":");
     BUFFER_ADD("{\"name\":\"");
 
-    if (metrics_prefix != NULL) {
+    if (metrics_prefix != NULL && strcasecmp(vl->plugin, "dse") != 0) {
       BUFFER_ADD("%s", metrics_prefix);
     }
 
@@ -260,8 +260,24 @@ static int value_list_to_insights(char *buffer, size_t buffer_size, /* {{{ */
     // Till we switch to better naming on DSE side
     if (strcasecmp(vl->plugin, "dse") == 0 && strlen(vl->plugin_instance)) {
         BUFFER_ADD("%s", vl->plugin_instance);
-    } else {
-        BUFFER_ADD("%s", vl->plugin);
+    } 
+
+    if (strcasecmp(vl->plugin, "dse") != 0) {
+        if (metrics_prefix != NULL) {
+           BUFFER_ADD("%s", metrics_prefix);
+	} else {
+	   BUFFER_ADD("collectd");
+	}
+
+    	if (strcmp(vl->plugin, vl->type) != 0) {
+	  BUFFER_ADD("_%s", vl->plugin);
+	}
+
+	BUFFER_ADD("_%s", vl->type);
+
+	if (strcmp("value", ds->ds[i].name) != 0) {
+	   BUFFER_ADD("_%s",  ds->ds[i].name);
+	}
     }
 
     BUFFER_ADD("\", \"timestamp\":%" PRIu64, CDTIME_T_TO_MS(vl->time));
