@@ -21,4 +21,4 @@ build:
       sudo BUILD_NUMBER=$BUILD_NUMBER make
       cd ..
       VER=`cat docker-build/VERSION`
-      curl -u $ARTIFACTORY_CREDS -T "{$(echo insights-collectd*.gz | tr ' ' ',')}" "https://datastax.jfrog.io/datastax/datastax-releases-local/com/datastax/dse/insights-collectd/${VER}-${BUILD_NUMBER}/"
+      curl -u $ARTIFACTORY_CREDS -T "{$(echo insights-collectd*.gz | tr ' ' ',')}" "https://repo.sjc.dsinternal.org/artifactory/datastax-releases-local/com/datastax/dse/insights-collectd/${VER}-${BUILD_NUMBER}/"
