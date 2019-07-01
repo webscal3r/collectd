@@ -14,6 +14,7 @@
 #include "unixsock.h"
 #include "utils_avltree.h"
 #include "utils_format_graphite.h"
+#include <stdbool.h>
 
 #define SCRIBE_BUF_SIZE 8192
 
@@ -59,6 +60,8 @@ static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
         return -1;
     }
 
+    //used by some metrics to report more frequently if they include nofilter tag
+    bool ignore_update_interval = false;
 
     // If contains the filter tag then skip
     if (vl->meta != NULL)
@@ -73,6 +76,17 @@ static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
        {
           //Filter flag found
           return 0;
+       }
+
+       char *nofilter = NULL;
+       status = meta_data_get_string(vl->meta, "nofilter", &nofilter);
+
+       if (status != -ENOENT && nofilter != NULL)
+          sfree(nofilter);
+
+       if (status == 0)
+       {
+          ignore_update_interval = true;
        }
     }
 
@@ -95,7 +109,7 @@ static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
 
         cdtime_t *last_write = NULL;
         char *key_copy = NULL;
-        if (get_scribe_metric_update_interval_secs() > 0)
+        if (!ignore_update_interval && get_scribe_metric_update_interval_secs() > 0)
         {
             if (c_avl_remove(write_cache, key, (void *)&key_copy, (void *)&last_write) == 0)
             {
