@@ -9,6 +9,7 @@
 
 #include "utils_format_json.h"
 #include "utils_format_dse_insights.h"
+#include "utils_cache.h"
 #include "utils_tail.h"
 #include "scribe_capi.h"
 #include "unixsock.h"
@@ -20,6 +21,8 @@
 
 static char *scribe_config_file = NULL;
 
+static char *metrics_buffer = NULL;
+static int metric_buffer_size = 1<<20; //1mb
 static c_avl_tree_t *write_cache;
 static pthread_mutex_t metrics_lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -46,8 +49,11 @@ static int compare_callback(void const *v0, void const *v1) {
 
 static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
 {
-    char buffer[SCRIBE_BUF_SIZE];
-    size_t   bfree = sizeof(buffer);
+    pthread_mutex_lock(&metrics_lock);
+
+    char *buffer = metrics_buffer;
+    size_t   bsize = metric_buffer_size;
+    size_t   bfree = bsize;
     size_t   bfill = 0;
 
     if (!is_scribe_initialized())
@@ -60,8 +66,8 @@ static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
         return -1;
     }
 
-    //used by some metrics to report more frequently if they include nofilter tag
-    bool ignore_update_interval = false;
+    //used by some metrics create inner series
+    bool is_series = false;
 
     // If contains the filter tag then skip
     if (vl->meta != NULL)
@@ -79,18 +85,18 @@ static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
        }
 
        char *nofilter = NULL;
-       status = meta_data_get_string(vl->meta, "nofilter", &nofilter);
+       status = meta_data_get_string(vl->meta, "insight_series", &nofilter);
 
        if (status != -ENOENT && nofilter != NULL)
           sfree(nofilter);
 
        if (status == 0)
        {
-          ignore_update_interval = true;
+          is_series = true;
        }
     }
 
-    pthread_mutex_lock(&metrics_lock);
+    bool first_write = false;
 
     //one metric at a time (in collectd they can be combined)
     for (int i = 0; i < ds->ds_num; i++) {
@@ -109,21 +115,24 @@ static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
 
         cdtime_t *last_write = NULL;
         char *key_copy = NULL;
-        if (!ignore_update_interval && get_scribe_metric_update_interval_secs() > 0)
+        if (get_scribe_metric_update_interval_secs() > 0)
         {
             if (c_avl_remove(write_cache, key, (void *)&key_copy, (void *)&last_write) == 0)
             {
+                // Within interval so wait nothing todo...
                 if (((vl->time >> 30) - (*last_write >> 30)) < get_scribe_metric_update_interval_secs())
                 {
                     r = c_avl_insert(write_cache, key_copy, last_write);
                     if (r != 0)
                         WARNING("Error adding key %s to write_cache", key);
+
                     continue;
                 }
             }
 
             // New key, allocate for cache otherwise reuse existing memory
             if (last_write == NULL) {
+                first_write = true;
                 last_write = malloc(sizeof(cdtime_t));
                 key_copy = strdup(key);
             }
@@ -132,11 +141,11 @@ static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
         }
 
         /* Send on to Scribe */
-        memset (buffer, 0, sizeof (buffer));
+        memset (buffer, 0, bsize);
 
         r = format_insights_initialize(buffer, &bfill, &bfree);
         if (r == 0)
-            r = format_insights_value_list(buffer, &bfill, &bfree, ds, vl, 0, NULL, 0, 0, NULL, i, i+1);
+            r = format_insights_value_list(buffer, &bfill, &bfree, ds, vl, 0, NULL, 0, 0, NULL, i, i+1, 0, NULL);
         if (r == 0)
             r = format_insights_finalize(buffer, &bfill, &bfree);
 
@@ -149,6 +158,35 @@ static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
                 r = c_avl_insert(write_cache, key_copy, last_write);
                 if (r != 0)
                     WARNING("Error adding key %s to write_cache", key);
+
+                 //If series tell collectd to keep the last N points
+                 if (is_series && !first_write)
+                 {
+                    int history_length = CDTIME_T_TO_MS(vl->interval) / 1000;
+                    
+                    //Might not be able to make a series if interval is >= scribe interval
+                    if (history_length < get_scribe_metric_update_interval_secs())
+                    {
+                        history_length = get_scribe_metric_update_interval_secs() / history_length;
+                        gauge_t history_values[history_length];
+                        if(0 == uc_get_history(ds, vl, history_values, history_length, ds->ds_num)) {
+                            memset (buffer, 0, bsize);
+                            bfill = 0;
+                            bfree = bsize;
+
+                            r = format_insights_initialize(buffer, &bfill, &bfree);
+
+                            if (r == 0)
+                                r = format_insights_value_list(buffer, &bfill, &bfree, ds, vl, 0, NULL, 0, 0, NULL, i, i+1, history_length, history_values);
+                            
+                            if (r == 0)
+                                r = format_insights_finalize(buffer, &bfill, &bfree);
+                        
+                            if (r == 0)
+                                scribe_log(buffer, "insights");
+                        }
+                    }
+                 }
             }
         }
         else
@@ -191,6 +229,7 @@ static int scribe_init(void)
     }
 
     us_init();
+    metrics_buffer = malloc(metric_buffer_size);
 
     return (0);
 }
@@ -239,6 +278,7 @@ static int scribe_shutdown()
         write_cache = NULL;
     }
 
+    sfree(metrics_buffer);
     pthread_mutex_unlock(&metrics_lock);
 
     return (0);

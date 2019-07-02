@@ -141,7 +141,7 @@ static int meta_to_tags(char *buffer, size_t buffer_size, /* {{{ */
 
 static int values_to_insights(char *buffer, size_t buffer_size, /* {{{ */
                               const data_set_t *ds, const value_list_t *vl,
-                              int store_rates, size_t ds_idx) {
+                              int store_rates, size_t ds_idx, int history_length, gauge_t *history_values) {
   size_t offset = 0;
   gauge_t *rates = NULL;
 
@@ -163,7 +163,23 @@ static int values_to_insights(char *buffer, size_t buffer_size, /* {{{ */
 
   BUFFER_ADD("{\"value\":");
 
-  if (ds->ds[ds_idx].type == DS_TYPE_GAUGE) {
+  if (history_length > 0) {
+    BUFFER_ADD("[");
+    for (int p = 0; p < history_length; p++) {
+      if (p > 0)
+        BUFFER_ADD(",");
+
+      if (isfinite(history_values[p]) && history_values[p] > 0.001) {
+                          INFO(JSON_GAUGE_FORMAT, history_values[p]);
+
+        BUFFER_ADD(JSON_GAUGE_FORMAT, history_values[p]);
+      } else {
+        BUFFER_ADD("0"); 
+      }
+    }
+
+    BUFFER_ADD("]");
+  } else if (ds->ds[ds_idx].type == DS_TYPE_GAUGE) {
     if (isfinite(vl->values[ds_idx].gauge)) {
       BUFFER_ADD(JSON_GAUGE_FORMAT, vl->values[ds_idx].gauge);
     } else {
@@ -218,8 +234,9 @@ static int value_list_to_insights(char *buffer, size_t buffer_size, /* {{{ */
                                   int store_rates,
                                   char const *const *http_attrs,
                                   size_t http_attrs_num, int data_ttl,
-                                  char const *metrics_prefix, int off, int lim) {
-  char temp[512];
+                                  char const *metrics_prefix, int off, int lim, 
+                                  int history_length, gauge_t *history_values) {
+  char temp[8192];
   size_t offset = 0;
   int keys_num;
   char **keys;
@@ -265,29 +282,39 @@ static int value_list_to_insights(char *buffer, size_t buffer_size, /* {{{ */
     if (strcasecmp(vl->plugin, "dse") != 0) {
         if (metrics_prefix != NULL) {
            BUFFER_ADD("%s", metrics_prefix);
-	} else {
-	   BUFFER_ADD("collectd");
-	}
+	  } else {
+	    BUFFER_ADD("collectd");
+	  }
 
-    	if (strcmp(vl->plugin, vl->type) != 0) {
-	  BUFFER_ADD("_%s", vl->plugin);
-	}
+    if (strcmp(vl->plugin, vl->type) != 0) {
+	    BUFFER_ADD("_%s", vl->plugin);
+	  }
 
-	BUFFER_ADD("_%s", vl->type);
+	  BUFFER_ADD("_%s", vl->type);
 
-	if (strcmp("value", ds->ds[i].name) != 0) {
-	   BUFFER_ADD("_%s",  ds->ds[i].name);
-	}
+	  if (strcmp("value", ds->ds[i].name) != 0) {
+	    BUFFER_ADD("_%s",  ds->ds[i].name);
+	  }
+
+    if (history_length > 0) {
+      BUFFER_ADD("_series");
     }
+  }
 
     BUFFER_ADD("\", \"timestamp\":%" PRIu64, CDTIME_T_TO_MS(vl->time));
     BUFFER_ADD(", \"insightMappingId\": \"collectd-v1\"");
     BUFFER_ADD(", \"insightType\":\"");
 
-    switch(ds->ds[i].type) {
+    if (history_length > 0)
+    {
+        BUFFER_ADD("SERIES");
+    }    
+    else
+    {
+      switch(ds->ds[i].type) {
         case DS_TYPE_ABSOLUTE:
         case DS_TYPE_COUNTER:
-	case DS_TYPE_DERIVE:
+	      case DS_TYPE_DERIVE:
             BUFFER_ADD("COUNTER");
             break;
         case DS_TYPE_GAUGE:
@@ -296,6 +323,7 @@ static int value_list_to_insights(char *buffer, size_t buffer_size, /* {{{ */
         default:
             ERROR("format_insights: Unknown data source type: %i", ds->ds[i].type);
             return -1;
+      }
     }
 
     /*
@@ -305,6 +333,12 @@ static int value_list_to_insights(char *buffer, size_t buffer_size, /* {{{ */
 
     if (data_ttl != 0)
       BUFFER_ADD("\"ttl\": %i,", data_ttl);
+    
+
+    if (history_length > 0) {
+        BUFFER_ADD("\"seriesLength\": %i,", history_length);
+        BUFFER_ADD("\"seriesInterval\": %lu,", CDTIME_T_TO_MS(vl->interval));
+    }
 
     BUFFER_ADD("\"collectdType\": %i", ds->ds[i].type);
     BUFFER_ADD(",\"host\": \"%s\"", vl->host);
@@ -336,7 +370,6 @@ static int value_list_to_insights(char *buffer, size_t buffer_size, /* {{{ */
         sfree(keys);
     }
 
-
     if (strlen(vl->plugin_instance))
         BUFFER_ADD_KEYVAL("plugin_instance", vl->plugin_instance);
     if (strlen(vl->type_instance))
@@ -349,8 +382,8 @@ static int value_list_to_insights(char *buffer, size_t buffer_size, /* {{{ */
     BUFFER_ADD("}}");
 
     memset(temp, 0, sizeof(temp));
-    status = values_to_insights(temp, sizeof(temp), ds, vl, store_rates, i);
-    if (status != 0)
+    status = values_to_insights(temp, sizeof(temp), ds, vl, store_rates, i, history_length, history_values);
+    if (status != 0) 
       return status;
 
     BUFFER_ADD(", \"data\": %s", temp);
@@ -371,13 +404,16 @@ static int format_insights_value_list_nocheck(
     size_t *ret_buffer_fill, size_t *ret_buffer_free, const data_set_t *ds,
     const value_list_t *vl, int store_rates, size_t temp_size,
     char const *const *http_attrs, size_t http_attrs_num, int data_ttl,
-    char const *metrics_prefix, int offset, int limit) {
+    char const *metrics_prefix, int offset, int limit, 
+    int history_length, gauge_t *history_values) {
   char temp[temp_size];
   int status;
 
   status = value_list_to_insights(temp, sizeof(temp), ds, vl, store_rates,
                                   http_attrs, http_attrs_num, data_ttl,
-                                  metrics_prefix, offset, limit);
+                                  metrics_prefix, offset, limit, 
+                                  history_length, history_values);
+
   if (status != 0)
     return status;
   temp_size = strlen(temp);
@@ -501,7 +537,8 @@ int format_insights_value_list(char *buffer, /* {{{ */
                                const data_set_t *ds, const value_list_t *vl,
                                int store_rates, char const *const *http_attrs,
                                size_t http_attrs_num, int data_ttl,
-                               char const *metrics_prefix, int offset, int limit) {
+                               char const *metrics_prefix, int offset, int limit, 
+                               int history_length, gauge_t *history_values) {
   if ((buffer == NULL) || (ret_buffer_fill == NULL) ||
       (ret_buffer_free == NULL) || (ds == NULL) || (vl == NULL))
     return -EINVAL;
@@ -509,13 +546,13 @@ int format_insights_value_list(char *buffer, /* {{{ */
   if (offset >= limit || ds->ds_num < limit)
     return -EINVAL;
 
-  if (*ret_buffer_free < 3)
+  if (*ret_buffer_free < 3) 
     return -ENOMEM;
 
   return format_insights_value_list_nocheck(
       buffer, ret_buffer_fill, ret_buffer_free, ds, vl, store_rates,
       (*ret_buffer_free) - 2, http_attrs, http_attrs_num, data_ttl,
-      metrics_prefix, offset, limit);
+      metrics_prefix, offset, limit, history_length, history_values);
 } /* }}} int format_insights_value_list */
 
 

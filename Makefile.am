@@ -1863,7 +1863,7 @@ libscribe_la_CXXFLAGS = -std=c++11 -DCOLLECTD $(AM_CPPFLAGS) $(BUILD_WITH_LIBTHR
 libscribe_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBTHRIFT_LDFLAGS)  $(BOOST_LDFLAGS) $(BUILD_WITH_OPENSSL_LDFLAGS) -lboost_system -lboost_filesystem -lboost_iostreams -lthrift -levent -lpthread -lz $(BUILD_WITH_LIBYAJL_LIBS)
 
 pkglib_LTLIBRARIES += write_scribe.la
-write_scribe_la_SOURCES = src/write_scribe.c src/utils_tail.c src/utils_format_graphite.c src/utils_format_dse_insights.c src/unixsock.c
+write_scribe_la_SOURCES = src/write_scribe.c src/utils_tail.c src/utils_format_graphite.c src/utils_format_dse_insights.c src/unixsock.c 
 write_scribe_la_CPPFLAGS = $(AM_CPPFLAGS) -I./src/scribe/src
 write_scribe_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBTHRIFT_LDFLAGS)  $(BOOST_LDFLAGS) $(BUILD_WITH_OPENSSL_LDFLAGS) -lboost_system -lboost_filesystem -lboost_iostreams -lthrift -levent -lpthread -lz $(BUILD_WITH_LIBYAJL_LIBS)
 write_scribe_la_LIBADD = libscribe.la libcmds.la

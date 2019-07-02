@@ -20,7 +20,8 @@ int format_insights_value_list(char *buffer, size_t *ret_buffer_fill,
                                const value_list_t *vl, int store_rates,
                                char const *const *http_attrs,
                                size_t http_attrs_num, int data_ttl,
-                               char const *metrics_prefix, int offset, int limit);
+                               char const *metrics_prefix, int offset, int limit, 
+                               int history_length, gauge_t *history_values);
 
 int format_insights_log(char *buffer, size_t *ret_buffer_fill, size_t *ret_buffer_free,
                         char *logmsg, char *file);
