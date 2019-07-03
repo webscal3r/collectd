@@ -57,12 +57,16 @@ static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
     size_t   bfill = 0;
 
     if (!is_scribe_initialized())
+    {
+        pthread_mutex_unlock(&metrics_lock);
         return -1;
+    }
 
     if (0 != strcmp (ds->type, vl->type))
     {
         ERROR ("scribe_write plugin: DS type does not match "
                 "value list type");
+        pthread_mutex_unlock(&metrics_lock);
         return -1;
     }
 
@@ -80,6 +84,7 @@ static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
 
        if (status == 0)
        {
+          pthread_mutex_unlock(&metrics_lock);
           //Filter flag found
           return 0;
        }
