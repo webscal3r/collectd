@@ -173,7 +173,11 @@ static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
                     if (history_length < get_scribe_metric_update_interval_secs())
                     {
                         history_length = get_scribe_metric_update_interval_secs() / history_length;
-                        gauge_t history_values[history_length];
+
+                        size_t histmemsz = sizeof(gauge_t) * history_length * ds->ds_num;
+                        gauge_t *history_values = malloc(histmemsz);
+                        memset(history_values, 0, histmemsz);
+
                         if(0 == uc_get_history(ds, vl, history_values, history_length, ds->ds_num)) {
                             memset (buffer, 0, bsize);
                             bfill = 0;
@@ -190,6 +194,8 @@ static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
                             if (r == 0)
                                 scribe_log(buffer, "insights");
                         }
+
+                        sfree(history_values);
                     }
                  }
             }

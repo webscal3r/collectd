@@ -170,8 +170,6 @@ static int values_to_insights(char *buffer, size_t buffer_size, /* {{{ */
         BUFFER_ADD(",");
 
       if (isfinite(history_values[p]) && history_values[p] > 0.001) {
-                          INFO(JSON_GAUGE_FORMAT, history_values[p]);
-
         BUFFER_ADD(JSON_GAUGE_FORMAT, history_values[p]);
       } else {
         BUFFER_ADD("0"); 
