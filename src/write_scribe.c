@@ -165,7 +165,7 @@ static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
                     WARNING("Error adding key %s to write_cache", key);
 
                  //If series tell collectd to keep the last N points
-                 if (is_series && !first_write)
+                 if (is_series)
                  {
                     int history_length = CDTIME_T_TO_MS(vl->interval) / 1000;
                     
@@ -183,16 +183,18 @@ static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
                             bfill = 0;
                             bfree = bsize;
 
-                            r = format_insights_initialize(buffer, &bfill, &bfree);
+                            if (!first_write) {
+                                r = format_insights_initialize(buffer, &bfill, &bfree);
 
-                            if (r == 0)
-                                r = format_insights_value_list(buffer, &bfill, &bfree, ds, vl, 0, NULL, 0, 0, NULL, i, i+1, history_length, history_values);
+                                if (r == 0)
+                                    r = format_insights_value_list(buffer, &bfill, &bfree, ds, vl, 0, NULL, 0, 0, NULL, i, i+1, history_length, history_values);
                             
-                            if (r == 0)
-                                r = format_insights_finalize(buffer, &bfill, &bfree);
+                                if (r == 0)
+                                    r = format_insights_finalize(buffer, &bfill, &bfree);
                         
-                            if (r == 0)
-                                scribe_log(buffer, "insights");
+                                if (r == 0)
+                                    scribe_log(buffer, "insights");
+                            }
                         }
 
                         sfree(history_values);

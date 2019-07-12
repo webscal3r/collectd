@@ -165,8 +165,8 @@ static int values_to_insights(char *buffer, size_t buffer_size, /* {{{ */
 
   if (history_length > 0) {
     BUFFER_ADD("[");
-    for (int p = 0; p < history_length; p++) {
-      if (p > 0)
+    for (int p = ds_idx; p < history_length * ds->ds_num; p += ds_idx) {
+      if (p > ds_idx)
         BUFFER_ADD(",");
 
       if (isfinite(history_values[p]) && history_values[p] > 0.001) {
