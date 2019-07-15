@@ -52,7 +52,7 @@ static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
     pthread_mutex_lock(&metrics_lock);
 
     char *buffer = metrics_buffer;
-    size_t   bsize = metric_buffer_size;
+    const size_t bsize = metric_buffer_size;
     size_t   bfree = bsize;
     size_t   bfill = 0;
 
@@ -101,8 +101,6 @@ static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
        }
     }
 
-    bool first_write = false;
-
     //one metric at a time (in collectd they can be combined)
     for (int i = 0; i < ds->ds_num; i++) {
 
@@ -118,6 +116,7 @@ static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
             return r;
         }
 
+        bool first_write = false;
         cdtime_t *last_write = NULL;
         char *key_copy = NULL;
         if (get_scribe_metric_update_interval_secs() > 0)
@@ -194,6 +193,9 @@ static int scribe_write_messages (const data_set_t *ds, const value_list_t *vl)
                         
                                 if (r == 0)
                                     scribe_log(buffer, "insights");
+
+                                if (r != 0)
+                                    WARNING("Problem writing %s %d %lu", key, r, bfree);
                             }
                         }
 

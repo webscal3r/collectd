@@ -145,8 +145,6 @@ static int values_to_insights(char *buffer, size_t buffer_size, /* {{{ */
   size_t offset = 0;
   gauge_t *rates = NULL;
 
-  memset(buffer, 0, buffer_size);
-
 #define BUFFER_ADD(...)                                                        \
   do {                                                                         \
     int status;                                                                \
@@ -165,14 +163,14 @@ static int values_to_insights(char *buffer, size_t buffer_size, /* {{{ */
 
   if (history_length > 0) {
     BUFFER_ADD("[");
-    for (int p = ds_idx; p < history_length * ds->ds_num; p += ds_idx) {
+    for (int p = ds_idx; p < history_length * ds->ds_num; p += ds->ds_num) {
       if (p > ds_idx)
         BUFFER_ADD(",");
 
-      if (isfinite(history_values[p]) && history_values[p] > 0.001) {
+      if (isfinite(history_values[p])) {
         BUFFER_ADD(JSON_GAUGE_FORMAT, history_values[p]);
       } else {
-        BUFFER_ADD("0"); 
+        BUFFER_ADD("NaN"); 
       }
     }
 
@@ -201,11 +199,7 @@ static int values_to_insights(char *buffer, size_t buffer_size, /* {{{ */
     if (isfinite(rates[ds_idx])) {
       BUFFER_ADD(JSON_GAUGE_FORMAT, rates[ds_idx]);
     } else {
-      DEBUG("utils_format_insights: invalid rates[ds_idx] for %s|%s|%s|%s|%s",
-              vl->plugin, vl->plugin_instance, vl->type, vl->type_instance,
-              ds->ds[ds_idx].name);
-      sfree(rates);
-      return -1;
+      BUFFER_ADD("NaN");
     }
   } else if (ds->ds[ds_idx].type == DS_TYPE_COUNTER) {
     BUFFER_ADD("%llu", vl->values[ds_idx].counter);
@@ -379,12 +373,14 @@ static int value_list_to_insights(char *buffer, size_t buffer_size, /* {{{ */
     BUFFER_ADD_KEYVAL("type", vl->type);
     BUFFER_ADD("}}");
 
-    memset(temp, 0, sizeof(temp));
-    status = values_to_insights(temp, sizeof(temp), ds, vl, store_rates, i, history_length, history_values);
-    if (status != 0) 
-      return status;
+    BUFFER_ADD(", \"data\": ");
 
-    BUFFER_ADD(", \"data\": %s", temp);
+    status = values_to_insights(buffer + offset, buffer_size - offset, ds, vl, store_rates, i, history_length, history_values);
+    if (status != 0) {
+      return status;
+    }
+
+    offset = strlen(buffer);
     BUFFER_ADD("}");
   } /* for ds->ds_num */
 
