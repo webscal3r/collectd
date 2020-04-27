@@ -29,15 +29,13 @@ jobs:
 
           docker export $cid | tar --delete 'dev' 'proc' 'etc' 'sys' 'collectd-symbols' | gzip -f - > $output
           docker export $cid | tar --delete 'dev' 'proc' 'etc' 'sys' 'collectd' | gzip -f - > $debugoutput
-      - name: Upload files
-      - run: |
-          set -x
+      
           assets=()
           for asset in ./*.tar.gz; do
             assets+=("-a" "$asset")
           done
-          tag_name="${GITHUB_REF##*/}"
-          hub release create "${assets[@]}" -m "$tag_name" "$tag_name"
+      
+          hub release create "${assets[@]}" -m "$RELEASE_VERSION" "$RELEASE_VERSION"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
