@@ -19,20 +19,20 @@ jobs:
           RELEASE_VERSION="${GITHUB_REF##*/}"
           RELEASE_VERSION="${RELEASE_VERSION:1}"
           debugoutput="insights-collectd-debug-${RELEASE_VERSION}.tar.gz"
-          output="insights-collectd-${RELEASE_VERSION}.tar.gz"
-          output_tar=$(basename $output .gz)
+          outputgz="insights-collectd-${RELEASE_VERSION}.tar.gz"
+          outputzip="insights-collectd-${RELEASE_VERSION}.zip"
 
           image=collectd-bundle
           docker build --build-arg insight_version=${RELEASE_VERSION} -t $image . 
 
           cid=$(docker create $image true)
-          trap "docker rm -f $cid; rm -f $output_tar" EXIT
 
-          docker export $cid | tar --delete 'dev' 'proc' 'etc' 'sys' 'collectd-symbols' | gzip -f - > $output
+          docker export $cid | tar --delete 'dev' 'proc' 'etc' 'sys' 'collectd-symbols' | gzip -f - > $outputgz
           docker export $cid | tar --delete 'dev' 'proc' 'etc' 'sys' 'collectd' | gzip -f - > $debugoutput
-      
+          tar xzf $outputgz && zip $outputzip $(tar ztf $outputgz)
+
           assets=()
-          for asset in ./*.tar.gz; do
+          for asset in $outputzip $outputgz $debugoutput; do
             assets+=("-a" "$asset")
           done
       
