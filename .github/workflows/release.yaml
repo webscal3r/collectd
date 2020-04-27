@@ -1,0 +1,43 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs: 
+  release:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with: 
+          submodules: true
+      - name: Build collectd in docker
+        run: |
+          set -x
+          RELEASE_VERSION="${GITHUB_REF##*/}"
+          debugoutput="insights-collectd-debug-${RELEASE_VERSION}.tar.gz"
+          output="insights-collectd-${RELEASE_VERSION}.tar.gz"
+          output_tar=$(basename $output .gz)
+
+          image=collectd-bundle
+          docker build --build-arg insight_version=${RELEASE_VERSION} -t $image . 
+
+          cid=$(docker create $image true)
+          trap "docker rm -f $cid; rm -f $output_tar" EXIT
+
+          docker export $cid | tar --delete 'dev' 'proc' 'etc' 'sys' 'collectd-symbols' | gzip -f - > $output
+          docker export $cid | tar --delete 'dev' 'proc' 'etc' 'sys' 'collectd' | gzip -f - > $debugoutput
+      - name: Upload files
+      - run: |
+          set -x
+          assets=()
+          for asset in ./*.tar.gz; do
+            assets+=("-a" "$asset")
+          done
+          tag_name="${GITHUB_REF##*/}"
+          hub release create "${assets[@]}" -m "$tag_name" "$tag_name"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
