@@ -16,7 +16,8 @@ jobs:
       - name: Build collectd in docker
         run: |
           set -x
-          RELEASE_VERSION="${GITHUB_REF##*/:1}"
+          RELEASE_VERSION="${GITHUB_REF##*/}"
+          RELEASE_VERSION="${RELEASE_VERSION:1}"
           debugoutput="insights-collectd-debug-${RELEASE_VERSION}.tar.gz"
           output="insights-collectd-${RELEASE_VERSION}.tar.gz"
           output_tar=$(basename $output .gz)
@@ -35,7 +36,7 @@ jobs:
             assets+=("-a" "$asset")
           done
       
-          hub release create "${assets[@]}" -m "$RELEASE_VERSION" "$RELEASE_VERSION"
+          hub release create "${assets[@]}" -m "v$RELEASE_VERSION" "v$RELEASE_VERSION"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
