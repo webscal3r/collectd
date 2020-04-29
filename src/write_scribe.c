@@ -8,7 +8,7 @@
 #include "configfile.h"
 
 #include "utils_format_json.h"
-#include "utils_format_dse_insights.h"
+#include "utils_format_mcac_insights.h"
 #include "utils_cache.h"
 #include "utils_tail.h"
 #include "scribe_capi.h"
