@@ -8,7 +8,7 @@
 #include "plugin.h"
 
 #include "utils_cache.h"
-#include "utils_format_dse_insights.h"
+#include "utils_format_mcac_insights.h"
 
 /* This is the INSIGHTS format for write_scribe output
  *

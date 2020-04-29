@@ -2,8 +2,8 @@
  * Insights JSON FORMAT
  **/
 
-#ifndef UTILS_FORMAT_DSE_INSIGHTS_H
-#define UTILS_FORMAT_DSE_INSIGHTS_H 1
+#ifndef UTILS_FORMAT_MCAC_INSIGHTS_H
+#define UTILS_FORMAT_MCAC_INSIGHTS_H 1
 
 #include "collectd.h"
 
