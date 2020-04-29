@@ -170,7 +170,7 @@ static int values_to_insights(char *buffer, size_t buffer_size, /* {{{ */
       if (isfinite(history_values[p])) {
         BUFFER_ADD(JSON_GAUGE_FORMAT, history_values[p]);
       } else {
-        BUFFER_ADD("NaN"); 
+        BUFFER_ADD("\"NaN\""); 
       }
     }
 
@@ -199,7 +199,7 @@ static int values_to_insights(char *buffer, size_t buffer_size, /* {{{ */
     if (isfinite(rates[ds_idx])) {
       BUFFER_ADD(JSON_GAUGE_FORMAT, rates[ds_idx]);
     } else {
-      BUFFER_ADD("NaN");
+      BUFFER_ADD("\"NaN\"");
     }
   } else if (ds->ds[ds_idx].type == DS_TYPE_COUNTER) {
     BUFFER_ADD("%llu", vl->values[ds_idx].counter);
@@ -261,17 +261,17 @@ static int value_list_to_insights(char *buffer, size_t buffer_size, /* {{{ */
     BUFFER_ADD(",{\"metadata\":");
     BUFFER_ADD("{\"name\":\"");
 
-    if (metrics_prefix != NULL && strcasecmp(vl->plugin, "dse") != 0) {
+    if (metrics_prefix != NULL && strcasecmp(vl->plugin, "mcac") != 0) {
       BUFFER_ADD("%s", metrics_prefix);
     }
 
-    // Avoid use the plugin-instance for the name in the case of DSE.
-    // Till we switch to better naming on DSE side
-    if (strcasecmp(vl->plugin, "dse") == 0 && strlen(vl->plugin_instance)) {
+    // Avoid use the plugin-instance for the name in the case of C*.
+    // Till we switch to better naming on C* side
+    if (strcasecmp(vl->plugin, "mcac") == 0 && strlen(vl->plugin_instance)) {
         BUFFER_ADD("%s", vl->plugin_instance);
     } 
 
-    if (strcasecmp(vl->plugin, "dse") != 0) {
+    if (strcasecmp(vl->plugin, "mcac") != 0) {
         if (metrics_prefix != NULL) {
            BUFFER_ADD("%s", metrics_prefix);
 	  } else {
