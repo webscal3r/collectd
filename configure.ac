@@ -776,7 +776,7 @@ AC_FUNC_STRERROR_R
 SAVE_CFLAGS="$CFLAGS"
 # Emulate behavior of src/Makefile.am
 if test "x$GCC" = "xyes"; then
-  CFLAGS="$CFLAGS -Wall -Werror"
+  CFLAGS="$CFLAGS -Wall -Werror -Wno-error=format-truncation"
 fi
 
 AC_CACHE_CHECK([for strtok_r],
@@ -924,7 +924,7 @@ AC_CHECK_FUNCS([thread_info], [have_thread_info="yes"], [have_thread_info="no"])
 # Check for strptime {{{
 if test "x$GCC" = "xyes"; then
   SAVE_CFLAGS="$CFLAGS"
-  CFLAGS="$CFLAGS -Wall -Wextra -Werror"
+  CFLAGS="$CFLAGS -Wall -Wextra -Werror -Wno-error=format-truncation"
 fi
 
 AC_CHECK_FUNCS([strptime], [have_strptime="yes"], [have_strptime="no"])
@@ -998,7 +998,7 @@ fi
 # These checks need -Werror because implicit function declarations are only a
 # warning ...
 SAVE_CFLAGS="$CFLAGS"
-CFLAGS="$CFLAGS -Werror"
+CFLAGS="$CFLAGS -Werror -Wno-error=format-truncation"
 
 AC_CACHE_CHECK([for timegm],
   [c_cv_have_timegm],
@@ -4290,7 +4290,7 @@ if test "x$with_libperl" = "xyes"; then
   # (see issues #41 and #42)
   SAVE_CFLAGS="$CFLAGS"
   SAVE_LIBS="$LIBS"
-  CFLAGS="$CFLAGS $PERL_CFLAGS -Wall -Werror"
+  CFLAGS="$CFLAGS $PERL_CFLAGS -Wall -Werror -Wno-error=format-truncation"
   LIBS="$LIBS $PERL_LIBS"
 
   AC_CACHE_CHECK([for broken Perl_load_module()],
@@ -6874,8 +6874,8 @@ AC_CONFIG_FILES([src/libcollectdclient/collectd/lcc_features.h])
 AM_CFLAGS="-Wall"
 AM_CXXFLAGS="-Wall"
 if test "x$enable_werror" != "xno"; then
-  AM_CFLAGS="$AM_CFLAGS -Werror"
-  AM_CXXFLAGS="$AM_CXXFLAGS -Werror"
+  AM_CFLAGS="$AM_CFLAGS -Werror -Wno-error=format-truncation"
+  AM_CXXFLAGS="$AM_CXXFLAGS -Werror -Wno-error=format-truncation"
 fi
 
 AC_SUBST([AM_CFLAGS])

@@ -1,5 +1,5 @@
 # Dockerfile for base collectd install
-FROM ubuntu:16.04 as base
+FROM ubuntu:18.04 as base
 
 ENV DEBIAN_FRONTEND=noninteractive
 ARG insight_version
@@ -149,6 +149,7 @@ RUN cd /collectd && ./clean.sh && ./build.sh && ./configure \
         --disable-zfs-arc \
         --disable-tokyotyrant \
         --disable-write_kafka \
+        --disable-barometer \
         --with-perl-bindings="INSTALLDIRS=vendor INSTALL_BASE=" \
         --without-libstatgrab \
         --without-included-ltdl \

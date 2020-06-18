@@ -4,4 +4,4 @@ export LD_LIBRARY_PATH=$BASEDIR/lib:$BASEDIR/lib/x86_64-linux-gnu:$BASEDIR/usr/l
 export PYTHONHOME=$BASEDIR/usr/lib/python2.7
 export PYTHONPATH=$BASEDIR/usr/lib/python2.7:$BASEDIR/usr/lib/python2.7/plat-x86_64-linux-gnu:$BASEDIR/usr/lib/python2.7/lib-tk:/opt/collectd/usr/lib/python2.7/lib-old:$BASEDIR/usr/lib/python2.7/lib-dynload:$BASEDIR/usr/lib/python2.7/dist-packages:$BASEDIR/usr/local/lib/python2.7/dist-packages
 
-exec -a collectd_wrapper $BASEDIR/lib/x86_64-linux-gnu/ld-2.23.so $BASEDIR/usr/sbin/collectd $* 
+exec -a collectd_wrapper $BASEDIR/lib/x86_64-linux-gnu/ld-2.27.so $BASEDIR/usr/sbin/collectd $* 
